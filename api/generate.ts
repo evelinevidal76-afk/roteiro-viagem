@@ -1,5 +1,3 @@
-export const config = { runtime: 'edge' }
-
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
@@ -7,12 +5,17 @@ export default async function handler(req: Request) {
 
   try {
     const { prompt } = await req.json()
+    const apiKey = (process as any).env?.ANTHROPIC_KEY || ''
+
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: 'API key não configurada' }), { status: 500 })
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': (globalThis as any).ANTHROPIC_KEY || '',
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
@@ -21,6 +24,11 @@ export default async function handler(req: Request) {
         messages: [{ role: 'user', content: prompt }],
       }),
     })
+
+    if (!response.ok) {
+      const err = await response.text()
+      return new Response(JSON.stringify({ error: `Anthropic error: ${err}` }), { status: 500 })
+    }
 
     const data = await response.json()
     const text = data?.content?.[0]?.text || ''
