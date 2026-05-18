@@ -272,17 +272,21 @@ function FlightGroup({
 }
 
 export default function StepFlight({ data, update, onNext }: Props) {
-  const [outLegs, setOutLegs] = useState<FlightInfo[]>(data.outboundFlight ? [data.outboundFlight] : [])
-  const [retLegs, setRetLegs] = useState<FlightInfo[]>(data.returnFlight ? [data.returnFlight] : [])
+  const [outLegs, setOutLegs] = useState<FlightInfo[]>(
+    data.outboundLegs?.length ? data.outboundLegs : data.outboundFlight ? [data.outboundFlight] : []
+  )
+  const [retLegs, setRetLegs] = useState<FlightInfo[]>(
+    data.returnLegs?.length ? data.returnLegs : data.returnFlight ? [data.returnFlight] : []
+  )
 
   const handleOutLegs = (legs: FlightInfo[]) => {
     setOutLegs(legs)
-    update({ outboundFlight: legs[0] || null })
+    update({ outboundFlight: legs[0] || null, outboundLegs: legs })
   }
 
   const handleRetLegs = (legs: FlightInfo[]) => {
     setRetLegs(legs)
-    update({ returnFlight: legs[0] || null })
+    update({ returnFlight: legs[0] || null, returnLegs: legs })
   }
 
   return (
