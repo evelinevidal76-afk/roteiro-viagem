@@ -1,6 +1,11 @@
-import type { WizardData, GeneratedItinerary } from '../types'
+import type { WizardData } from '../types'
 
-export async function generateItinerary(data: WizardData): Promise<GeneratedItinerary> {
+export async function generateItineraryStream(
+  data: WizardData,
+  onChunk: (html: string) => void,
+  onDone: () => void,
+  onError: (msg: string) => void
+) {
   const outLegs = (data as any).outboundLegs || (data.outboundFlight ? [data.outboundFlight] : [])
   const retLegs = (data as any).returnLegs || (data.returnFlight ? [data.returnFlight] : [])
   const cities = (data as any).cities || []
@@ -16,7 +21,7 @@ export async function generateItinerary(data: WizardData): Promise<GeneratedItin
   const destino = outLegs.length > 0 ? outLegs[outLegs.length - 1].destinationCode : '?'
   const cidadesTexto = cities.length > 0 ? cities.join(', ') : destino
 
-  const prompt = `Você é um especialista em viagens de luxo e milhas aéreas. Crie um roteiro de viagem detalhado em JSON.
+  const prompt = `Você é um especialista em viagens de luxo e milhas aéreas. Crie um roteiro de viagem completo em HTML bonito e bem estruturado.
 
 DADOS DA VIAGEM:
 - Destino final: ${destino}
@@ -33,59 +38,38 @@ ${voosIda || '  Não informado'}
 VOOS DE RETORNO:
 ${voosRetorno || '  Não informado'}
 
-Responda APENAS com JSON válido, sem markdown, sem explicações, neste formato exato:
-{
-  "destination": "Nome do destino principal",
-  "summary": "Resumo da viagem em 2 frases",
-  "totalEstimatedCost": "R$ X.XXX - R$ X.XXX por pessoa",
-  "days": [
-    {
-      "date": "2026-10-20",
-      "dayLabel": "Dia 1 — Chegada em Cancún",
-      "activities": [
-        {
-          "time": "15:35",
-          "duration": "30min",
-          "title": "Chegada ao aeroporto de Cancún",
-          "description": "Desembarque e retirada de bagagens",
-          "type": "voo",
-          "estimatedCost": "incluso",
-          "tips": "Dica útil aqui",
-          "link": ""
-        }
-      ]
-    }
-  ],
-  "hotels": [
-    {
-      "name": "Nome do hotel",
-      "category": "5 estrelas",
-      "location": "Zona Hoteleira, Cancún",
-      "priceRange": "R$ 800 - R$ 1.500/noite",
-      "highlights": ["piscina infinity", "vista para o mar"]
-    }
-  ]
-}`
+Gere HTML completo com estas seções:
+- Cabeçalho com destino, resumo e custo estimado total
+- Um bloco por dia com título do dia, data e lista de atividades (horário, título, descrição, dica, custo estimado)
+- Seção de hotéis sugeridos com nome, categoria, localização, preço e destaques
 
-  const res = await fetch('/api/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt }),
-  })
+Use estas classes CSS inline para estilo dark/dourado:
+- Fundo dos cards: background:#1a2235; border:1px solid #2d3a52; border-radius:12px; padding:20px; margin-bottom:16px
+- Títulos dos dias: color:#c9973c; font-size:20px; font-weight:700; margin-bottom:4px
+- Horários: color:#c9973c; font-weight:600; font-size:13px
+- Títulos de atividade: color:#f0e6d3; font-weight:600; font-size:15px
+- Descrições: color:#8892a4; font-size:13px; line-height:1.6
+- Dicas: background:rgba(201,151,60,0.08); border:1px solid #2d3a52; border-radius:8px; padding:8px 12px; color:#c9973c; font-size:12px; margin-top:8px
+- Hotéis: background:#1a2235; border:1px solid #2d3a52; border-radius:12px; padding:20px; margin-bottom:12px
+- Tags de destaque: background:rgba(255,255,255,0.05); border:1px solid #2d3a52; border-radius:20px; padding:4px 10px; font-size:11px; color:#8892a4; display:inline-block; margin:3px
 
-  if (!res.ok) throw new Error('Erro ao conectar com o servidor')
-
-  const { text, error } = await res.json()
-  if (error) throw new Error(error)
-  if (!text) throw new Error('Resposta vazia do servidor')
+Responda APENAS com o HTML, sem markdown, sem explicações.`
 
   try {
-    const clean = text.replace(/```json|```/g, '').trim()
-    const start = clean.indexOf('{')
-    const end = clean.lastIndexOf('}')
-    if (start === -1 || end === -1) throw new Error('JSON não encontrado')
-    return JSON.parse(clean.slice(start, end + 1))
-  } catch {
-    throw new Error('Erro ao processar o roteiro gerado')
-  }
-}
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+
+    if (!res.ok) throw new Error('Erro ao conectar com o servidor')
+
+    const reader = res.body!.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
