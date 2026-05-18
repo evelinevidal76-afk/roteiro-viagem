@@ -11,7 +11,9 @@ const STORAGE_KEY = 'decifrando_roteiros_state'
 
 const initialData: WizardData = {
   outboundFlight: null,
+  outboundLegs: [],
   returnFlight: null,
+  returnLegs: [],
   hasReturn: false,
   citiesCount: 1,
   cities: [],
