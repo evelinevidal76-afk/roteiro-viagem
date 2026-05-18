@@ -143,7 +143,7 @@ export default function StepFlight({ data, update, onNext }: Props) {
   // Auto-fill airline from flight number when entering manual mode
   useEffect(() => {
     if (manual && num.length >= 2 && !manualData.airline) {
-      getAirlineName(num).then(name => {
+      getAirlineName(num).then((name: string) => {
         if (name) setManualData(prev => ({ ...prev, airline: name }))
       })
     }
@@ -151,7 +151,7 @@ export default function StepFlight({ data, update, onNext }: Props) {
 
   useEffect(() => {
     if (returnManual && returnNum.length >= 2 && !returnManualData.airline) {
-      getAirlineName(returnNum).then(name => {
+      getAirlineName(returnNum).then((name: string) => {
         if (name) setReturnManualData(prev => ({ ...prev, airline: name }))
       })
     }
