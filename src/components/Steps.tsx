@@ -6,27 +6,69 @@ import { StepHeader, NavButtons, Card } from './ui'
 export default function StepCities({
   data, update, onNext, onBack
 }: { data: WizardData; update: (p: Partial<WizardData>) => void; onNext: () => void; onBack: () => void }) {
+  const cities: string[] = (data as any).cities || []
+
+  const setCount = (n: number) => {
+    const current = cities.slice(0, n)
+    while (current.length < n) current.push('')
+    update({ citiesCount: n, cities: current } as any)
+  }
+
+  const setCity = (i: number, v: string) => {
+    const updated = [...cities]
+    updated[i] = v
+    update({ cities: updated } as any)
+  }
+
+  const canContinue = cities.length > 0 && cities.every(c => c.trim().length > 0)
+
   return (
     <div className="fade-up">
       <StepHeader
-        title="Quantas cidades? 🗺️"
-        subtitle="Quantas cidades base você quer incluir no roteiro?"
+        title="Destino(s) 🗺️"
+        subtitle="Quantas cidades base e quais são elas?"
       />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
+
+      {/* Seleção de quantidade */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
         {[1, 2, 3, 4, 5, 6].map(n => (
           <Card
             key={n}
             selected={data.citiesCount === n}
-            onClick={() => update({ citiesCount: n })}
-            style={{ textAlign: 'center', padding: '20px 12px' }}
+            onClick={() => setCount(n)}
+            style={{ textAlign: 'center', padding: '16px 8px' }}
           >
-            <div style={{ fontSize: 28, marginBottom: 6 }}>{'🏙️'.repeat(Math.min(n, 3))}</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: data.citiesCount === n ? 'var(--gold)' : 'var(--cream)', fontFamily: 'var(--font-display)' }}>{n}</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{n === 1 ? 'cidade' : 'cidades'}</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{n === 1 ? 'cidade' : 'cidades'}</div>
           </Card>
         ))}
       </div>
-      <NavButtons onBack={onBack} onNext={onNext} />
+
+      {/* Campos de cidade */}
+      {cities.length > 0 && (
+        <div style={{ display: 'grid', gap: 10, marginBottom: 32 }}>
+          {cities.map((city, i) => (
+            <div key={i}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>
+                {cities.length === 1 ? 'Cidade' : `Cidade ${i + 1}`}
+              </label>
+              <input
+                type="text"
+                value={city}
+                onChange={e => setCity(i, e.target.value)}
+                placeholder={i === 0 ? 'Ex: Cancún' : i === 1 ? 'Ex: Playa del Carmen' : 'Ex: Tulum'}
+                style={{
+                  width: '100%', padding: '11px 14px',
+                  background: 'var(--navy-soft)', border: `1px solid ${city.trim() ? 'var(--gold)' : 'var(--border)'}`,
+                  borderRadius: 'var(--radius)', color: 'var(--cream)', fontSize: 14,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <NavButtons onBack={onBack} onNext={onNext} disabled={!canContinue} />
     </div>
   )
 }
