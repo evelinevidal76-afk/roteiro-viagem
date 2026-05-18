@@ -76,8 +76,10 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
 
   const calcArrival = (dep: string, dur: string) => {
     const [dh, dm] = dep.split(':').map(Number)
-    const match = dur.match(/(\d+)h(\d+)?/)
-    if (!match || isNaN(dh) || isNaN(dm)) return
+    if (isNaN(dh) || isNaN(dm)) return
+    // Aceita 6h47, 6h, 6:47, 6:47h
+    const match = dur.match(/(\d+)[h:](\d+)?/)
+    if (!match) return
     const dHours = parseInt(match[1]) || 0
     const dMins = parseInt(match[2]) || 0
     const total = dh * 60 + dm + dHours * 60 + dMins
@@ -106,21 +108,16 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
 
   const handleDeparture = (v: string) => {
     updateManual('departure', v)
-    if (manualData.duration && manualData.duration.includes('h')) {
+    if (manualData.duration && /\d+[h:]\d*/.test(manualData.duration)) {
       calcArrival(v, manualData.duration)
     } else if (manualData.arrival) {
       calcDuration(v, manualData.arrival)
     }
   }
 
-  const handleArrival = (v: string) => {
-    updateManual('arrival', v)
-    if (manualData.departure) calcDuration(manualData.departure, v)
-  }
-
   const handleDuration = (v: string) => {
     updateManual('duration', v)
-    if (manualData.departure && v.includes('h')) calcArrival(manualData.departure, v)
+    if (manualData.departure && /\d+[h:]\d*/.test(v)) calcArrival(manualData.departure, v)
   }
 
   return (
