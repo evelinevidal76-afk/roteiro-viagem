@@ -149,3 +149,27 @@ export default function App() {
               whiteSpace: 'nowrap', cursor: i < step ? 'pointer' : 'default',
               transition: 'all 0.2s', fontFamily: 'var(--font-body)',
             }}>
+            {i < step ? '✓ ' : ''}{label}
+          </button>
+        ))}
+      </div>
+
+      {step > 0 && (
+        <div style={{ padding: '6px 24px', background: 'rgba(201,151,60,0.06)', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ color: 'var(--gold)' }}>●</span> Progresso salvo automaticamente no banco de dados
+        </div>
+      )}
+
+      <main style={{ flex: 1, padding: '32px 24px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
+        {step === 0 && <StepFlight data={data} update={update} onNext={next} />}
+        {step === 1 && <StepCities data={data} update={update} onNext={next} onBack={back} />}
+        {step === 2 && <StepProfile data={data} update={update} onNext={next} onBack={back} />}
+        {step === 3 && <StepStyles data={data} update={update} onNext={next} onBack={back} />}
+        {step === 4 && <StepTransport data={data} update={update} onNext={next} onBack={back} />}
+        {step === 5 && (
+          <StepExtras data={data} update={update} onGenerate={handleGenerate} onBack={back} loading={loading} error={error} />
+        )}
+      </main>
+    </div>
+  )
+}
