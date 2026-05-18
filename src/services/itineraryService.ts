@@ -73,3 +73,19 @@ Responda APENAS com o HTML, sem markdown, sem explicações.`
       if (done) break
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const raw = line.slice(6)
+        if (raw === '[DONE]') { onDone(); return }
+        try {
+          const { text } = JSON.parse(raw)
+          if (text) onChunk(text)
+        } catch {}
+      }
+    }
+    onDone()
+  } catch (e: any) {
+    onError(e.message || 'Erro desconhecido')
+  }
+}
