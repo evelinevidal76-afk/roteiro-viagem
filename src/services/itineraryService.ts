@@ -79,6 +79,8 @@ Responda APENAS com JSON válido, sem markdown, sem explicações, neste formato
   if (error) throw new Error(error)
   if (!text) throw new Error('Resposta vazia do servidor')
 
+  console.log('RESPOSTA BRUTA:', text)
+
   try {
     const clean = text.replace(/```json|```/g, '').trim()
     const match = clean.match(/\{[\s\S]*\}/)
