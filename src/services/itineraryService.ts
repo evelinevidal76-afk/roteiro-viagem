@@ -79,13 +79,12 @@ Responda APENAS com JSON válido, sem markdown, sem explicações, neste formato
   if (error) throw new Error(error)
   if (!text) throw new Error('Resposta vazia do servidor')
 
-  console.log('RESPOSTA BRUTA:', text)
-
   try {
     const clean = text.replace(/```json|```/g, '').trim()
-    const match = clean.match(/\{[\s\S]*\}/)
-    if (!match) throw new Error('JSON não encontrado na resposta')
-    return JSON.parse(match[0])
+    const start = clean.indexOf('{')
+    const end = clean.lastIndexOf('}')
+    if (start === -1 || end === -1) throw new Error('JSON não encontrado')
+    return JSON.parse(clean.slice(start, end + 1))
   } catch {
     throw new Error('Erro ao processar o roteiro gerado')
   }
