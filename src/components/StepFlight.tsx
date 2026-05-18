@@ -63,6 +63,21 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
   num: string; manualData: FlightInfo; updateManual: (f: string, v: any) => void
   onSave: () => void; onCancel: () => void; error: string | null
 }) {
+  // Calcula chegada a partir de partida + duração (aceita 6:47 ou 6h47)
+  const calcArrival = (dep: string, dur: string) => {
+    const [dh, dm] = dep.split(':').map(Number)
+    if (isNaN(dh) || isNaN(dm)) return
+    const match = dur.match(/(\d+)[h:](\d+)?/)
+    if (!match) return
+    const dHours = parseInt(match[1]) || 0
+    const dMins = parseInt(match[2]) || 0
+    const total = dh * 60 + dm + dHours * 60 + dMins
+    const ah = Math.floor(total / 60) % 24
+    const am = total % 60
+    updateManual('arrival', `${ah.toString().padStart(2, '0')}:${am.toString().padStart(2, '0')}`)
+  }
+
+  // Calcula duração a partir de partida + chegada
   const calcDuration = (dep: string, arr: string) => {
     const [dh, dm] = dep.split(':').map(Number)
     const [ah, am] = arr.split(':').map(Number)
@@ -72,20 +87,6 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
     const h = Math.floor(diff / 60)
     const m = diff % 60
     updateManual('duration', m > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${h}h`)
-  }
-
-  const calcArrival = (dep: string, dur: string) => {
-    const [dh, dm] = dep.split(':').map(Number)
-    if (isNaN(dh) || isNaN(dm)) return
-    // Aceita 6h47, 6h, 6:47, 6:47h
-    const match = dur.match(/(\d+)[h:](\d+)?/)
-    if (!match) return
-    const dHours = parseInt(match[1]) || 0
-    const dMins = parseInt(match[2]) || 0
-    const total = dh * 60 + dm + dHours * 60 + dMins
-    const ah = Math.floor(total / 60) % 24
-    const am = total % 60
-    updateManual('arrival', `${ah.toString().padStart(2, '0')}:${am.toString().padStart(2, '0')}`)
   }
 
   const handleOriginCode = async (v: string) => {
