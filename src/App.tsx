@@ -1,13 +1,15 @@
+```tsx
 import React, { useState, useEffect, useRef } from 'react'
 import type { WizardData } from './types'
 import StepFlight from './components/StepFlight'
 import StepCities, { StepProfile, StepStyles, StepTransport } from './components/Steps'
+import StepHotel from './components/StepHotel'
 import StepExtras from './components/StepExtras'
 import ItineraryView from './components/ItineraryView'
 import { generateItineraryStream } from './services/itineraryService'
-import { salvarEstado, salvarRoteiro, recuperarSessao, getSessaoId, clearSessaoId } from './services/dbService'
+import { salvarEstado, recuperarSessao, getSessaoId, clearSessaoId } from './services/dbService'
 
-const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Detalhes']
+const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Hotel', 'Detalhes']
 const LS_KEY = 'decifrando_roteiros_step'
 
 const initialData: WizardData = {
@@ -79,9 +81,7 @@ export default function App() {
         htmlRef.current += chunk
         setItineraryHtml(htmlRef.current)
       },
-      () => {
-        setLoading(false)
-      },
+      () => { setLoading(false) },
       (msg) => {
         setError(msg)
         setLoading(false)
@@ -166,10 +166,12 @@ export default function App() {
         {step === 2 && <StepProfile data={data} update={update} onNext={next} onBack={back} />}
         {step === 3 && <StepStyles data={data} update={update} onNext={next} onBack={back} />}
         {step === 4 && <StepTransport data={data} update={update} onNext={next} onBack={back} />}
-        {step === 5 && (
+        {step === 5 && <StepHotel data={data} update={update} onNext={next} onBack={back} />}
+        {step === 6 && (
           <StepExtras data={data} update={update} onGenerate={handleGenerate} onBack={back} loading={loading} error={error} />
         )}
       </main>
     </div>
   )
 }
+```
