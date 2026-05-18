@@ -1,0 +1,57 @@
+export const AIRPORTS: Record<string, string> = {
+  GIG: 'Rio de Janeiro', GRU: 'São Paulo', CGH: 'São Paulo', BSB: 'Brasília',
+  CNF: 'Belo Horizonte', SSA: 'Salvador', REC: 'Recife', FOR: 'Fortaleza',
+  POA: 'Porto Alegre', CWB: 'Curitiba', BEL: 'Belém', MAO: 'Manaus',
+  VCP: 'Campinas', FLN: 'Florianópolis', NAT: 'Natal', MCZ: 'Maceió',
+  THE: 'Teresina', SLZ: 'São Luís', CGB: 'Cuiabá', PVH: 'Porto Velho',
+  MCP: 'Macapá', RBR: 'Rio Branco', BOA: 'Boa Vista', PMW: 'Palmas',
+  AJU: 'Aracaju', JPA: 'João Pessoa', IOS: 'Ilhéus', VDC: 'Vitória da Conquista',
+
+  PTY: 'Cidade do Panamá', MIA: 'Miami', JFK: 'Nova York', LAX: 'Los Angeles',
+  ORD: 'Chicago', ATL: 'Atlanta', EWR: 'Newark', IAH: 'Houston',
+  MCO: 'Orlando', FLL: 'Fort Lauderdale', DFW: 'Dallas', BOS: 'Boston',
+  CUN: 'Cancún', MEX: 'Cidade do México', BOG: 'Bogotá', LIM: 'Lima',
+  SCL: 'Santiago', EZE: 'Buenos Aires', MVD: 'Montevidéu', ASU: 'Assunção',
+  GYE: 'Guayaquil', UIO: 'Quito', CCS: 'Caracas', HAV: 'Havana',
+  SJO: 'San José', GUA: 'Guatemala', SAL: 'San Salvador', TGU: 'Tegucigalpa',
+
+  LHR: 'Londres', CDG: 'Paris', AMS: 'Amsterdã', FRA: 'Frankfurt',
+  MAD: 'Madri', BCN: 'Barcelona', LIS: 'Lisboa', OPO: 'Porto',
+  FCO: 'Roma', MXP: 'Milão', ZRH: 'Zurique', VIE: 'Viena',
+  BRU: 'Bruxelas', CPH: 'Copenhague', OSL: 'Oslo', ARN: 'Estocolmo',
+  HEL: 'Helsinque', ATH: 'Atenas', IST: 'Istambul', DXB: 'Dubai',
+  DOH: 'Doha', AUH: 'Abu Dhabi', SIN: 'Singapura', BKK: 'Bangkok',
+  HKG: 'Hong Kong', NRT: 'Tóquio', ICN: 'Seul', PEK: 'Pequim',
+  PVG: 'Xangai', SYD: 'Sydney', MEL: 'Melbourne', JNB: 'Joanesburgo',
+  CAI: 'Cairo', CMN: 'Casablanca', NBO: 'Nairóbi', ADD: 'Adis Abeba',
+  DEL: 'Nova Delhi', BOM: 'Mumbai', MLE: 'Maldivas', SEZ: 'Seychelles',
+  GRU_: '', ORY: 'Paris Orly', MRS: 'Marselha', NCE: 'Nice',
+  CPT: 'Cidade do Cabo', RIO: 'Rio de Janeiro',
+}
+
+export const AIRLINES: Record<string, string> = {
+  AD: 'Azul', G3: 'Gol', LA: 'LATAM', JJ: 'LATAM', O6: 'Avianca Brasil',
+  CM: 'Copa Airlines', AA: 'American Airlines', UA: 'United Airlines',
+  DL: 'Delta', B6: 'JetBlue', WN: 'Southwest', NK: 'Spirit',
+  F9: 'Frontier', G4: 'Allegiant', AS: 'Alaska Airlines',
+  AC: 'Air Canada', AM: 'Aeroméxico', VB: 'VivaAerobus', Y4: 'Volaris',
+  AV: 'Avianca', LA2: 'LATAM', LP: 'LATAM Perú', XL: 'LATAM Ecuador',
+  LU: 'LATAM Chile', AR: 'Aerolíneas Argentinas', PZ: 'LATAM Paraguay',
+  BA: 'British Airways', IB: 'Iberia', TP: 'TAP Portugal',
+  AF: 'Air France', KL: 'KLM', LH: 'Lufthansa', AZ: 'ITA Airways',
+  SK: 'SAS', LX: 'Swiss', OS: 'Austrian', SN: 'Brussels Airlines',
+  TK: 'Turkish Airlines', EK: 'Emirates', QR: 'Qatar Airways',
+  EY: 'Etihad', SQ: 'Singapore Airlines', CX: 'Cathay Pacific',
+  NH: 'ANA', JL: 'Japan Airlines', OZ: 'Asiana', KE: 'Korean Air',
+  QF: 'Qantas', NZ: 'Air New Zealand', SA: 'South African Airways',
+}
+
+export function getAirportCity(code: string): string {
+  return AIRPORTS[code.toUpperCase()] || ''
+}
+
+export function getAirlineName(flightNumber: string): string {
+  const code2 = flightNumber.slice(0, 2).toUpperCase()
+  const code3 = flightNumber.slice(0, 3).toUpperCase()
+  return AIRLINES[code2] || AIRLINES[code3] || ''
+}
