@@ -44,7 +44,9 @@ export type Transport = 'carro' | 'transporte_publico' | 'misto' | 'tour_guiado'
 export interface WizardData {
   // Step 1 — Voo
   outboundFlight: FlightInfo | null
+  outboundLegs: FlightInfo[]
   returnFlight: FlightInfo | null
+  returnLegs: FlightInfo[]
   hasReturn: boolean
   // Step 2 — Destino
   citiesCount: number
