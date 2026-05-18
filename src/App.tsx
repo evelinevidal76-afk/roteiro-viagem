@@ -14,6 +14,7 @@ const initialData: WizardData = {
   returnFlight: null,
   hasReturn: false,
   citiesCount: 1,
+  cities: [],
   travelProfile: null,
   travelStyles: [],
   transport: null,
