@@ -115,6 +115,11 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
     }
   }
 
+  const handleArrival = (v: string) => {
+    updateManual('arrival', v)
+    if (manualData.departure) calcDuration(manualData.departure, v)
+  }
+
   const handleDuration = (v: string) => {
     updateManual('duration', v)
     if (manualData.departure && /\d+[h:]\d*/.test(v)) calcArrival(manualData.departure, v)
