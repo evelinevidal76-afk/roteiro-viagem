@@ -1,119 +1,88 @@
 import type { WizardData, GeneratedItinerary } from '../types'
 
-const PROFILE_LABELS = {
-  economico: 'Econômico (hostels, restaurantes locais, transporte público)',
-  intermediario: 'Intermediário (hotéis 3-4 estrelas, restaurantes variados)',
-  luxo: 'Luxo (hotéis 5 estrelas, restaurantes finos, experiências exclusivas)',
-  misto: 'Misto (combina categorias conforme a atividade)',
-}
+export async function generateItinerary(data: WizardData): Promise<GeneratedItinerary> {
+  const outLegs = (data as any).outboundLegs || (data.outboundFlight ? [data.outboundFlight] : [])
+  const retLegs = (data as any).returnLegs || (data.returnFlight ? [data.returnFlight] : [])
+  const cities = (data as any).cities || []
 
-const STYLE_LABELS: Record<string, string> = {
-  gastronomico: 'Gastronômico',
-  cultural: 'Cultural',
-  aventura: 'Aventura',
-  relax: 'Relax/Descanso',
-  compras: 'Compras',
-  natureza: 'Natureza',
-  historico: 'Histórico/Arqueológico',
-  praias: 'Praias',
-  vida_noturna: 'Vida Noturna',
-  familia: 'Família com crianças',
-}
+  const voosIda = outLegs.map((v: any, i: number) =>
+    `  Voo ${i+1}: ${v.flightNumber} · ${v.originCode}→${v.destinationCode} · ${v.date} · ${v.departure}→${v.arrival}${v.duration ? ` · ${v.duration}` : ''}`
+  ).join('\n')
 
-const TRANSPORT_LABELS = {
-  carro: 'Aluguel de carro',
-  transporte_publico: 'Transporte público (ônibus, metrô, trem)',
-  misto: 'Misto (carro + transporte público)',
-  tour_guiado: 'Tours guiados contratados',
-}
+  const voosRetorno = retLegs.map((v: any, i: number) =>
+    `  Voo ${i+1}: ${v.flightNumber} · ${v.originCode}→${v.destinationCode} · ${v.date} · ${v.departure}→${v.arrival}${v.duration ? ` · ${v.duration}` : ''}`
+  ).join('\n')
 
-export async function generateItinerary(
-  data: WizardData
-): Promise<GeneratedItinerary> {
-  const flight = data.outboundFlight!
-  const returnFlight = data.returnFlight
+  const destino = outLegs.length > 0 ? outLegs[outLegs.length - 1].destinationCode : '?'
+  const cidadesTexto = cities.length > 0 ? cities.join(', ') : destino
 
-  const prompt = `Você é um especialista em roteiros de viagem para brasileiros que viajam usando milhas aéreas.
+  const prompt = `Você é um especialista em viagens de luxo e milhas aéreas. Crie um roteiro de viagem detalhado em JSON.
 
-Crie um roteiro de viagem COMPLETO e DETALHADO com base nas informações abaixo:
+DADOS DA VIAGEM:
+- Destino final: ${destino}
+- Cidades a visitar: ${cidadesTexto}
+- Perfil: ${data.travelProfile}
+- Estilos: ${data.travelStyles?.join(', ')}
+- Transporte local: ${data.transport}
+- Viajantes: ${data.travelersCount}
+- Observações: ${data.notes || 'nenhuma'}
 
-VOOS:
-- Ida: ${flight.flightNumber} | ${flight.origin} (${flight.originCode}) → ${flight.destination} (${flight.destinationCode})
-  Data: ${flight.date} | Partida: ${flight.departure} | Chegada: ${flight.arrival}
-${returnFlight ? `- Retorno: ${returnFlight.flightNumber} | Data: ${returnFlight.date}` : '- Sem voo de retorno definido'}
+VOOS DE IDA:
+${voosIda || '  Não informado'}
 
-DESTINO:
-- Cidade(s) base: ${data.citiesCount} cidade(s)
-- Destino principal: ${flight.destination}
+VOOS DE RETORNO:
+${voosRetorno || '  Não informado'}
 
-PERFIL DO VIAJANTE:
-- Estilo de viagem: ${PROFILE_LABELS[data.travelProfile!]}
-- Interesses: ${data.travelStyles.map(s => STYLE_LABELS[s]).join(', ')}
-- Transporte local: ${TRANSPORT_LABELS[data.transport!]}
-- Número de viajantes: ${data.travelersCount}
-${data.notes ? `- Observações especiais: ${data.notes}` : ''}
-
-INSTRUÇÕES PARA O ROTEIRO:
-1. Organize por dia, com horários específicos para cada atividade
-2. Inclua sugestões de restaurantes alinhados ao perfil
-3. Sugira hotéis compatíveis com o perfil (mínimo 2 opções)
-4. Para cada atividade inclua: horário, duração estimada, custo aproximado em USD/local, dicas práticas
-5. Considere tempo de deslocamento entre atividades
-6. Primeiro e último dia: considere horários de chegada/partida dos voos
-7. Inclua dicas culturais e práticas específicas do destino
-8. Sugira o melhor momento para cada atração (clima, filas, luz para fotos)
-
-Responda APENAS com JSON válido no seguinte formato (sem markdown, sem explicações):
+Responda APENAS com JSON válido, sem markdown, sem explicações, neste formato exato:
 {
-  "destination": "nome da cidade/destino",
-  "summary": "resumo de 2-3 linhas do roteiro",
+  "destination": "Nome do destino principal",
+  "summary": "Resumo da viagem em 2 frases",
+  "totalEstimatedCost": "R$ X.XXX - R$ X.XXX por pessoa",
   "days": [
     {
-      "date": "DD/MM/AAAA",
-      "dayLabel": "Dia 1 — Nome do tema do dia",
+      "date": "2026-10-20",
+      "dayLabel": "Dia 1 — Chegada em Cancún",
       "activities": [
         {
-          "time": "HH:MM",
-          "duration": "Xh",
-          "title": "Nome da atividade",
-          "description": "Descrição detalhada com dicas práticas",
-          "type": "hotel|restaurante|passeio|transporte|voo|livre",
-          "estimatedCost": "USD XX por pessoa",
-          "tips": "Dica prática importante",
-          "link": "https://site-oficial.com (opcional)"
+          "time": "15:35",
+          "duration": "30min",
+          "title": "Chegada ao aeroporto de Cancún",
+          "description": "Desembarque e retirada de bagagens",
+          "type": "voo",
+          "estimatedCost": "incluso",
+          "tips": "Dica útil aqui",
+          "link": ""
         }
       ]
     }
   ],
   "hotels": [
     {
-      "name": "Nome do Hotel",
-      "category": "3 estrelas|4 estrelas|5 estrelas|Hostel|Resort",
-      "location": "Bairro/região",
-      "priceRange": "USD XX-XX por noite",
-      "highlights": ["diferencial 1", "diferencial 2", "diferencial 3"]
+      "name": "Nome do hotel",
+      "category": "5 estrelas",
+      "location": "Zona Hoteleira, Cancún",
+      "priceRange": "R$ 800 - R$ 1.500/noite",
+      "highlights": ["piscina infinity", "vista para o mar"]
     }
-  ],
-  "totalEstimatedCost": "USD XX-XX por pessoa (exceto voos)"
+  ]
 }`
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+    body: JSON.stringify({ prompt }),
   })
 
-  const result = await response.json()
-  const text = result.content?.[0]?.text || ''
+  if (!res.ok) throw new Error('Erro ao conectar com o servidor')
+
+  const { text, error } = await res.json()
+  if (error) throw new Error(error)
+  if (!text) throw new Error('Resposta vazia do servidor')
 
   try {
-    const cleaned = text.replace(/```json|```/g, '').trim()
-    return JSON.parse(cleaned) as GeneratedItinerary
+    const clean = text.replace(/```json|```/g, '').trim()
+    return JSON.parse(clean)
   } catch {
-    throw new Error('Erro ao processar o roteiro gerado. Tente novamente.')
+    throw new Error('Erro ao processar o roteiro gerado')
   }
 }
