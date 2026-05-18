@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import type { WizardData, GeneratedItinerary } from './types'
 import StepFlight from './components/StepFlight'
 import StepCities, { StepProfile, StepStyles, StepTransport } from './components/Steps'
@@ -7,6 +7,7 @@ import ItineraryView from './components/ItineraryView'
 import { generateItinerary } from './services/itineraryService'
 
 const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Detalhes']
+const STORAGE_KEY = 'decifrando_roteiros_state'
 
 const initialData: WizardData = {
   outboundFlight: null,
@@ -20,37 +21,64 @@ const initialData: WizardData = {
   notes: '',
 }
 
+function loadSaved(): { step: number; data: WizardData } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return { step: 0, data: initialData }
+    return JSON.parse(raw)
+  } catch {
+    return { step: 0, data: initialData }
+  }
+}
+
+function save(step: number, data: WizardData) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ step, data }))
+  } catch {}
+}
+
+function clear() {
+  try { localStorage.removeItem(STORAGE_KEY) } catch {}
+}
+
 export default function App() {
-  const [step, setStep] = useState(0)
-  const [data, setData] = useState<WizardData>(initialData)
+  const saved = loadSaved()
+  const [step, setStep] = useState(saved.step)
+  const [data, setData] = useState<WizardData>(saved.data)
   const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const update = (patch: Partial<WizardData>) =>
-    setData(prev => ({ ...prev, ...patch }))
+    setData(prev => {
+      const next = { ...prev, ...patch }
+      save(step, next)
+      return next
+    })
 
-  const next = () => setStep(s => Math.min(s + 1, STEPS.length - 1))
-  const back = () => setStep(s => Math.max(s - 1, 0))
+  const goToStep = (s: number) => {
+    setStep(s)
+    save(s, data)
+  }
+
+  const next = () => goToStep(Math.min(step + 1, STEPS.length - 1))
+  const back = () => goToStep(Math.max(step - 1, 0))
 
   const handleGenerate = async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
     try {
       const result = await generateItinerary(data)
       setItinerary(result)
+      clear()
     } catch (e: any) {
       setError(e.message || 'Erro ao gerar roteiro')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   const restart = () => {
-    setStep(0)
-    setData(initialData)
-    setItinerary(null)
-    setError(null)
+    clear()
+    setStep(0); setData(initialData)
+    setItinerary(null); setError(null)
   }
 
   if (itinerary) {
@@ -60,11 +88,8 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header style={{
-        padding: '20px 24px',
-        borderBottom: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        padding: '20px 24px', borderBottom: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--gold)', fontWeight: 700 }}>
@@ -74,48 +99,44 @@ export default function App() {
             Decifrando Milhas
           </div>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-          Passo {step + 1} de {STEPS.length}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {(data.outboundFlight || step > 0) && (
+            <button onClick={restart}
+              style={{ fontSize: 11, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+              Recomeçar
+            </button>
+          )}
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Passo {step + 1} de {STEPS.length}</div>
         </div>
       </header>
 
       <div style={{ height: 3, background: 'var(--navy-soft)' }}>
-        <div style={{
-          height: '100%',
-          width: `${((step + 1) / STEPS.length) * 100}%`,
-          background: 'var(--gold)',
-          transition: 'width 0.4s ease',
-        }} />
+        <div style={{ height: '100%', width: `${((step + 1) / STEPS.length) * 100}%`, background: 'var(--gold)', transition: 'width 0.4s ease' }} />
       </div>
 
-      <div style={{
-        display: 'flex',
-        borderBottom: '1px solid var(--border)',
-        overflowX: 'auto',
-        padding: '0 24px',
-      }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', overflowX: 'auto', padding: '0 24px' }}>
         {STEPS.map((label, i) => (
-          <button
-            key={label}
-            onClick={() => i < step && setStep(i)}
+          <button key={label} onClick={() => i < step && goToStep(i)}
             style={{
-              padding: '12px 16px',
-              fontSize: 12,
+              padding: '12px 16px', fontSize: 12,
               fontWeight: i === step ? 600 : 400,
               color: i === step ? 'var(--gold)' : i < step ? 'var(--cream)' : 'var(--muted)',
-              background: 'none',
-              border: 'none',
+              background: 'none', border: 'none',
               borderBottom: i === step ? '2px solid var(--gold)' : '2px solid transparent',
-              whiteSpace: 'nowrap',
-              cursor: i < step ? 'pointer' : 'default',
-              transition: 'all 0.2s',
-              fontFamily: 'var(--font-body)',
-            }}
-          >
+              whiteSpace: 'nowrap', cursor: i < step ? 'pointer' : 'default',
+              transition: 'all 0.2s', fontFamily: 'var(--font-body)',
+            }}>
             {i < step ? '✓ ' : ''}{label}
           </button>
         ))}
       </div>
+
+      {/* Saved indicator */}
+      {step > 0 && (
+        <div style={{ padding: '6px 24px', background: 'rgba(201,151,60,0.06)', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ color: 'var(--gold)' }}>●</span> Progresso salvo automaticamente
+        </div>
+      )}
 
       <main style={{ flex: 1, padding: '32px 24px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
         {step === 0 && <StepFlight data={data} update={update} onNext={next} />}
@@ -124,14 +145,7 @@ export default function App() {
         {step === 3 && <StepStyles data={data} update={update} onNext={next} onBack={back} />}
         {step === 4 && <StepTransport data={data} update={update} onNext={next} onBack={back} />}
         {step === 5 && (
-          <StepExtras
-            data={data}
-            update={update}
-            onGenerate={handleGenerate}
-            onBack={back}
-            loading={loading}
-            error={error}
-          />
+          <StepExtras data={data} update={update} onGenerate={handleGenerate} onBack={back} loading={loading} error={error} />
         )}
       </main>
     </div>
