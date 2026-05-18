@@ -1,18 +1,18 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+export const config = { runtime: 'edge' }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
   }
 
   try {
-    const { prompt } = req.body
+    const { prompt } = await req.json()
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_KEY || '',
+        'x-api-key': (globalThis as any).ANTHROPIC_KEY || '',
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
@@ -24,8 +24,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data = await response.json()
     const text = data?.content?.[0]?.text || ''
-    return res.status(200).json({ text })
+    return new Response(JSON.stringify({ text }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 }
