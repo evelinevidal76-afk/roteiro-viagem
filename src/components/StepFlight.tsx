@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import type { WizardData, FlightInfo } from '../types'
-import { Button, StepHeader, ErrorBox, Card } from './ui'
+import { Button, StepHeader, Card } from './ui'
 import { fetchFlight } from '../services/flightService'
 import { getAirportCity, getAirlineName } from '../services/lookupService'
 
@@ -27,7 +27,7 @@ function Field({ label, value, onChange, placeholder }: {
   )
 }
 
-function FlightLeg({ index, total, flight, onRemove, onEdit }: {
+function FlightLegCard({ index, total, flight, onRemove, onEdit }: {
   index: number; total: number; flight: FlightInfo; onRemove: () => void; onEdit: () => void
 }) {
   return (
@@ -63,8 +63,7 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
   num: string; manualData: FlightInfo; updateManual: (f: string, v: any) => void
   onSave: () => void; onCancel: () => void; error: string | null
 }) {
-  const calcDuration = (dep: string, arr: string, updateFn: (f: string, v: any) => void) => {
-    if (!dep || !arr) return
+  const calcDuration = (dep: string, arr: string) => {
     const [dh, dm] = dep.split(':').map(Number)
     const [ah, am] = arr.split(':').map(Number)
     if (isNaN(dh) || isNaN(dm) || isNaN(ah) || isNaN(am)) return
@@ -72,17 +71,7 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
     if (diff < 0) diff += 24 * 60
     const h = Math.floor(diff / 60)
     const m = diff % 60
-    updateFn('duration', m > 0 ? `${h}h${m.toString().padStart(2,'0')}` : `${h}h`)
-  }
-
-  const handleDeparture = (v: string) => {
-    updateManual('departure', v)
-    if (manualData.arrival) calcDuration(v, manualData.arrival, updateManual)
-  }
-
-  const handleArrival = (v: string) => {
-    updateManual('arrival', v)
-    if (manualData.departure) calcDuration(manualData.departure, v, updateManual)
+    updateManual('duration', m > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${h}h`)
   }
 
   const handleOriginCode = async (v: string) => {
@@ -103,27 +92,35 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
     }
   }
 
+  const handleDeparture = (v: string) => {
+    updateManual('departure', v)
+    if (manualData.arrival) calcDuration(v, manualData.arrival)
+  }
+
+  const handleArrival = (v: string) => {
+    updateManual('arrival', v)
+    if (manualData.departure) calcDuration(manualData.departure, v)
+  }
+
   return (
     <>
       {error && <div style={{ background: 'rgba(226,75,74,0.1)', border: '1px solid rgba(226,75,74,0.4)', borderRadius: 8, padding: '10px 12px', color: '#f09595', fontSize: 12, marginBottom: 12 }}>⚠️ {error}</div>}
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>Preencha os dados manualmente:</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
         <Field label="Companhia" value={manualData.airline} onChange={v => updateManual('airline', v)} placeholder="Azul, Copa..." />
-        <Field label="Duração" value={manualData.duration} onChange={v => updateManual('duration', v)} placeholder="1h05" />
+        <Field label="Duração" value={manualData.duration} onChange={v => updateManual('duration', v)} placeholder="calculada automaticamente" />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px 1fr', gap: 8, marginBottom: 8 }}>
         <div>
           <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Origem</label>
-          <input type="text" value={manualData.originCode}
-            onChange={e => handleOriginCode(e.target.value)}
+          <input type="text" value={manualData.originCode} onChange={e => handleOriginCode(e.target.value)}
             placeholder="GIG" maxLength={3}
             style={{ width: '100%', padding: '8px 10px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 13, textTransform: 'uppercase' }} />
         </div>
         <Field label="Cidade origem" value={manualData.origin} onChange={v => updateManual('origin', v)} placeholder="Rio de Janeiro" />
         <div>
           <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Destino</label>
-          <input type="text" value={manualData.destinationCode}
-            onChange={e => handleDestCode(e.target.value)}
+          <input type="text" value={manualData.destinationCode} onChange={e => handleDestCode(e.target.value)}
             placeholder="CNF" maxLength={3}
             style={{ width: '100%', padding: '8px 10px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 13, textTransform: 'uppercase' }} />
         </div>
@@ -141,8 +138,16 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
   )
 }
 
-export default function StepFlight({ data, update, onNext }: Props) {
-  const [legs, setLegs] = useState<FlightInfo[]>(data.outboundFlight ? [data.outboundFlight] : [])
+// Componente reutilizável para grupo de voos (ida ou retorno)
+function FlightGroup({
+  title, legs, onLegsChange, destinationLabel, color = 'var(--gold)'
+}: {
+  title: string
+  legs: FlightInfo[]
+  onLegsChange: (legs: FlightInfo[]) => void
+  destinationLabel?: string
+  color?: string
+}) {
   const [adding, setAdding] = useState(legs.length === 0)
   const [editIndex, setEditIndex] = useState<number | null>(null)
   const [num, setNum] = useState('')
@@ -152,17 +157,8 @@ export default function StepFlight({ data, update, onNext }: Props) {
   const [manual, setManual] = useState(false)
   const [manualData, setManualData] = useState<FlightInfo>(emptyManual())
 
-  const [returnNum, setReturnNum] = useState('')
-  const [returnDate, setReturnDate] = useState('')
-  const [returnLoading, setReturnLoading] = useState(false)
-  const [returnError, setReturnError] = useState<string | null>(null)
-  const [returnManual, setReturnManual] = useState(false)
-  const [returnManualData, setReturnManualData] = useState<FlightInfo>(emptyManual())
-  const [returnConfirmed, setReturnConfirmed] = useState(!!data.returnFlight)
-
   const resetForm = () => { setNum(''); setDate(''); setError(null); setManual(false); setManualData(emptyManual()) }
 
-  // Auto-fill airline from flight number when entering manual mode
   useEffect(() => {
     if (manual && num.length >= 2 && !manualData.airline) {
       getAirlineName(num).then((name: string) => {
@@ -170,14 +166,6 @@ export default function StepFlight({ data, update, onNext }: Props) {
       })
     }
   }, [manual, num])
-
-  useEffect(() => {
-    if (returnManual && returnNum.length >= 2 && !returnManualData.airline) {
-      getAirlineName(returnNum).then((name: string) => {
-        if (name) setReturnManualData(prev => ({ ...prev, airline: name }))
-      })
-    }
-  }, [returnManual, returnNum])
 
   const handleSearch = async () => {
     if (!num || !date) { setError('Preencha número e data'); return }
@@ -200,8 +188,8 @@ export default function StepFlight({ data, update, onNext }: Props) {
     } else {
       updated = [...legs, flight]
     }
-    setLegs(updated); setAdding(false); resetForm()
-    update({ outboundFlight: updated[0] })
+    onLegsChange(updated)
+    setAdding(false); resetForm()
   }
 
   const saveManual = () => {
@@ -212,8 +200,8 @@ export default function StepFlight({ data, update, onNext }: Props) {
   }
 
   const removeLeg = (i: number) => {
-    const updated = legs.filter((_, j) => j !== i); setLegs(updated)
-    update({ outboundFlight: updated[0] || null })
+    const updated = legs.filter((_, j) => j !== i)
+    onLegsChange(updated)
     if (updated.length === 0) setAdding(true)
   }
 
@@ -223,55 +211,32 @@ export default function StepFlight({ data, update, onNext }: Props) {
     setManualData(leg); setManual(true); setAdding(true)
   }
 
-  const handleSearchReturn = async () => {
-    if (!returnNum || !returnDate) return
-    setReturnLoading(true); setReturnError(null)
-    try {
-      const flight = await fetchFlight(returnNum, returnDate)
-      update({ returnFlight: flight }); setReturnConfirmed(true); setReturnManual(false)
-    } catch {
-      const airline = await getAirlineName(returnNum)
-      setReturnError('Voo não encontrado. Preencha manualmente:')
-      setReturnManual(true)
-      setReturnManualData({ ...emptyManual(returnNum, returnDate), airline })
-    } finally { setReturnLoading(false) }
-  }
-
-  const saveReturnManual = () => {
-    if (!returnManualData.originCode || !returnManualData.destinationCode || !returnManualData.departure || !returnManualData.arrival) {
-      setReturnError('Preencha: código de origem, destino, partida e chegada'); return
-    }
-    const flight = { ...returnManualData, flightNumber: returnNum || returnManualData.flightNumber, date: returnDate || returnManualData.date }
-    update({ returnFlight: flight }); setReturnConfirmed(true); setReturnManual(false); setReturnError(null)
-  }
-
-  const destination = legs.length > 0 ? legs[legs.length - 1].destinationCode : null
-
   const inputStyle = { width: '100%', padding: '10px 12px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 14 }
+  const lastDest = legs.length > 0 ? legs[legs.length - 1].destinationCode : null
 
   return (
-    <div className="fade-up">
-      <StepHeader title="Seus voos ✈️" subtitle="Adicione todos os voos da ida em sequência — incluindo conexões com voos diferentes." />
-
+    <div>
       {legs.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 12 }}>
           {legs.map((leg, i) => (
-            <FlightLeg key={i} index={i} total={legs.length} flight={leg}
+            <FlightLegCard key={i} index={i} total={legs.length} flight={leg}
               onRemove={() => removeLeg(i)} onEdit={() => startEdit(i)} />
           ))}
-          {destination && (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4, marginBottom: 16 }}>
-              <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0, marginLeft: 6 }} />
-              <div style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 600 }}>🏁 {destination} — Destino final</div>
+          {lastDest && (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4, marginBottom: 12 }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, flexShrink: 0, marginLeft: 6 }} />
+              <div style={{ fontSize: 13, color, fontWeight: 600 }}>
+                {destinationLabel === 'origem' ? `🛫 ${lastDest} — Origem` : `🏁 ${lastDest} — ${destinationLabel || 'Destino final'}`}
+              </div>
             </div>
           )}
         </div>
       )}
 
       {adding && (
-        <Card style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            {editIndex !== null ? `Editar voo ${editIndex + 1}` : legs.length === 0 ? 'Primeiro voo da ida' : `Adicionar voo ${legs.length + 1}`}
+        <Card style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color, fontWeight: 600, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            {editIndex !== null ? `Editar voo ${editIndex + 1}` : legs.length === 0 ? title : `Adicionar voo ${legs.length + 1}`}
           </div>
           {!manual ? (
             <>
@@ -298,66 +263,59 @@ export default function StepFlight({ data, update, onNext }: Props) {
 
       {!adding && (
         <button onClick={() => { setAdding(true); setEditIndex(null); resetForm() }}
-          style={{ width: '100%', padding: '12px', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', background: 'none', color: 'var(--gold)', fontSize: 14, cursor: 'pointer', marginBottom: 24 }}>
-          + Adicionar próximo voo da ida
+          style={{ width: '100%', padding: '10px', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', background: 'none', color, fontSize: 13, cursor: 'pointer', marginBottom: 8 }}>
+          + Adicionar próximo voo de {title.toLowerCase().includes('retorno') ? 'retorno' : 'ida'}
         </button>
       )}
+    </div>
+  )
+}
 
-      <div style={{ marginTop: 8, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+export default function StepFlight({ data, update, onNext }: Props) {
+  const [outLegs, setOutLegs] = useState<FlightInfo[]>(data.outboundFlight ? [data.outboundFlight] : [])
+  const [retLegs, setRetLegs] = useState<FlightInfo[]>(data.returnFlight ? [data.returnFlight] : [])
+
+  const handleOutLegs = (legs: FlightInfo[]) => {
+    setOutLegs(legs)
+    update({ outboundFlight: legs[0] || null })
+  }
+
+  const handleRetLegs = (legs: FlightInfo[]) => {
+    setRetLegs(legs)
+    update({ returnFlight: legs[0] || null })
+  }
+
+  return (
+    <div className="fade-up">
+      <StepHeader title="Seus voos ✈️" subtitle="Adicione todos os voos da ida em sequência — incluindo conexões com voos diferentes." />
+
+      <FlightGroup
+        title="Primeiro voo da ida"
+        legs={outLegs}
+        onLegsChange={handleOutLegs}
+      />
+
+      <div style={{ marginTop: 16, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 16 }}>
           <input type="checkbox" checked={data.hasReturn}
-            onChange={e => { update({ hasReturn: e.target.checked, returnFlight: null }); setReturnConfirmed(false); setReturnManual(false) }}
+            onChange={e => { update({ hasReturn: e.target.checked, returnFlight: null }); setRetLegs([]) }}
             style={{ accentColor: 'var(--gold)', width: 16, height: 16 }} />
-          <span style={{ fontSize: 14, color: 'var(--cream)' }}>Adicionar voo de retorno</span>
+          <span style={{ fontSize: 14, color: 'var(--cream)' }}>Adicionar voo(s) de retorno</span>
         </label>
 
-        {data.hasReturn && !returnConfirmed && (
-          <Card style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Voo de retorno</div>
-            {!returnManual ? (
-              <>
-                {returnError && <div style={{ background: 'rgba(226,75,74,0.1)', border: '1px solid rgba(226,75,74,0.4)', borderRadius: 8, padding: '10px 12px', color: '#f09595', fontSize: 12, marginBottom: 12 }}>⚠️ {returnError}</div>}
-                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                  <div style={{ flex: 2 }}>
-                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>Número do voo</label>
-                    <input type="text" value={returnNum} onChange={e => setReturnNum(e.target.value.toUpperCase())} placeholder="Ex: CM735" style={inputStyle} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>Data</label>
-                    <input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} style={inputStyle} />
-                  </div>
-                </div>
-                <Button onClick={handleSearchReturn} loading={returnLoading} disabled={!returnNum || !returnDate}>🔍 Buscar voo de retorno</Button>
-              </>
-            ) : (
-              <ManualForm num={returnNum} manualData={returnManualData}
-                updateManual={(f, v) => setReturnManualData(prev => ({ ...prev, [f]: v }))}
-                onSave={saveReturnManual} onCancel={() => { setReturnManual(false); setReturnError(null) }} error={returnError} />
-            )}
-          </Card>
-        )}
-
-        {data.hasReturn && returnConfirmed && data.returnFlight && (
-          <Card style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>✓ Retorno confirmado</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--cream)', fontFamily: 'var(--font-display)' }}>
-              {data.returnFlight.originCode} → {data.returnFlight.destinationCode}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>
-              {data.returnFlight.airline && `${data.returnFlight.airline} · `}
-              {data.returnFlight.flightNumber} · {data.returnFlight.date}
-              {data.returnFlight.departure && ` · ${data.returnFlight.departure} → ${data.returnFlight.arrival}`}
-            </div>
-            <button onClick={() => { setReturnConfirmed(false); setReturnManual(false); update({ returnFlight: null }) }}
-              style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
-              Editar retorno
-            </button>
-          </Card>
+        {data.hasReturn && (
+          <FlightGroup
+            title="Primeiro voo do retorno"
+            legs={retLegs}
+            onLegsChange={handleRetLegs}
+            destinationLabel="origem"
+            color="var(--cream)"
+          />
         )}
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
-        <Button onClick={onNext} disabled={legs.length === 0}>Continuar →</Button>
+        <Button onClick={onNext} disabled={outLegs.length === 0}>Continuar →</Button>
       </div>
     </div>
   )
