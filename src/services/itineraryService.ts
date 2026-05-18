@@ -81,7 +81,9 @@ Responda APENAS com JSON válido, sem markdown, sem explicações, neste formato
 
   try {
     const clean = text.replace(/```json|```/g, '').trim()
-    return JSON.parse(clean)
+    const match = clean.match(/\{[\s\S]*\}/)
+    if (!match) throw new Error('JSON não encontrado na resposta')
+    return JSON.parse(match[0])
   } catch {
     throw new Error('Erro ao processar o roteiro gerado')
   }
