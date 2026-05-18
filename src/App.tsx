@@ -1,4 +1,3 @@
-```tsx
 import React, { useState, useEffect, useRef } from 'react'
 import type { WizardData } from './types'
 import StepFlight from './components/StepFlight'
@@ -174,4 +173,3 @@ export default function App() {
     </div>
   )
 }
-```
