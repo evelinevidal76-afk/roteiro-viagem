@@ -38,7 +38,7 @@ export default function App() {
   useEffect(() => {
     const sessaoId = getSessaoId()
     if (sessaoId) {
-      recuperarSessao(sessaoId).then(saved => {
+      recuperarSessao(sessaoId).then((saved: Partial<WizardData> | null) => {
         if (saved) {
           setData(prev => ({ ...prev, ...saved }))
           const savedStep = parseInt(localStorage.getItem(LS_KEY) || '0')
