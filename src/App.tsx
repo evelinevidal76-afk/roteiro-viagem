@@ -70,7 +70,9 @@ export default function App() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--gold)', fontWeight: 700 }}>
             Decifrando Roteiros
           </div>
-          
+          <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            Decifrando Milhas
+          </div>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>
           Passo {step + 1} de {STEPS.length}
