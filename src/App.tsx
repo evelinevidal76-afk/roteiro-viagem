@@ -5,9 +5,10 @@ import StepCities, { StepProfile, StepStyles, StepTransport } from './components
 import StepExtras from './components/StepExtras'
 import ItineraryView from './components/ItineraryView'
 import { generateItinerary } from './services/itineraryService'
+import { salvarEstado, salvarRoteiro, recuperarSessao, getSessaoId, clearSessaoId } from './services/dbService'
 
 const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Detalhes']
-const STORAGE_KEY = 'decifrando_roteiros_state'
+const LS_KEY = 'decifrando_roteiros_step'
 
 const initialData: WizardData = {
   outboundFlight: null,
@@ -24,44 +25,44 @@ const initialData: WizardData = {
   notes: '',
 }
 
-function loadSaved(): { step: number; data: WizardData } {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { step: 0, data: initialData }
-    return JSON.parse(raw)
-  } catch {
-    return { step: 0, data: initialData }
-  }
-}
-
-function save(step: number, data: WizardData) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ step, data }))
-  } catch {}
-}
-
-function clear() {
-  try { localStorage.removeItem(STORAGE_KEY) } catch {}
-}
-
 export default function App() {
-  const saved = loadSaved()
-  const [step, setStep] = useState(saved.step)
-  const [data, setData] = useState<WizardData>(saved.data)
+  const [step, setStep] = useState(0)
+  const [data, setData] = useState<WizardData>(initialData)
   const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [restoring, setRestoring] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  const update = (patch: Partial<WizardData>) =>
-    setData(prev => {
-      const next = { ...prev, ...patch }
-      save(step, next)
-      return next
-    })
+  // Restaura sessão ao abrir
+  useEffect(() => {
+    const sessaoId = getSessaoId()
+    if (sessaoId) {
+      recuperarSessao(sessaoId).then(saved => {
+        if (saved) {
+          setData(prev => ({ ...prev, ...saved }))
+          const savedStep = parseInt(localStorage.getItem(LS_KEY) || '0')
+          setStep(savedStep)
+        }
+        setRestoring(false)
+      })
+    } else {
+      setRestoring(false)
+    }
+  }, [])
+
+  const update = async (patch: Partial<WizardData>) => {
+    const next = { ...data, ...patch }
+    setData(next)
+    // Salva no banco em background
+    setSaving(true)
+    try { await salvarEstado(next) } catch {}
+    setSaving(false)
+  }
 
   const goToStep = (s: number) => {
     setStep(s)
-    save(s, data)
+    localStorage.setItem(LS_KEY, String(s))
   }
 
   const next = () => goToStep(Math.min(step + 1, STEPS.length - 1))
@@ -72,16 +73,29 @@ export default function App() {
     try {
       const result = await generateItinerary(data)
       setItinerary(result)
-      clear()
+      const sessaoId = getSessaoId()
+      if (sessaoId) await salvarRoteiro(sessaoId, result)
     } catch (e: any) {
       setError(e.message || 'Erro ao gerar roteiro')
     } finally { setLoading(false) }
   }
 
   const restart = () => {
-    clear()
+    clearSessaoId()
+    localStorage.removeItem(LS_KEY)
     setStep(0); setData(initialData)
     setItinerary(null); setError(null)
+  }
+
+  if (restoring) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 32, height: 32, border: '2px solid var(--gold)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ color: 'var(--muted)', fontSize: 14 }}>Recuperando seu progresso...</p>
+        </div>
+      </div>
+    )
   }
 
   if (itinerary) {
@@ -90,22 +104,15 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{
-        padding: '20px 24px', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      <header style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--gold)', fontWeight: 700 }}>
-            Decifrando Roteiros
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            Decifrando Milhas
-          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--gold)', fontWeight: 700 }}>Decifrando Roteiros</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>Decifrando Milhas</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {saving && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Salvando...</span>}
           {(data.outboundFlight || step > 0) && (
-            <button onClick={restart}
-              style={{ fontSize: 11, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+            <button onClick={restart} style={{ fontSize: 11, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
               Recomeçar
             </button>
           )}
@@ -134,10 +141,9 @@ export default function App() {
         ))}
       </div>
 
-      {/* Saved indicator */}
       {step > 0 && (
         <div style={{ padding: '6px 24px', background: 'rgba(201,151,60,0.06)', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ color: 'var(--gold)' }}>●</span> Progresso salvo automaticamente
+          <span style={{ color: 'var(--gold)' }}>●</span> Progresso salvo automaticamente no banco de dados
         </div>
       )}
 
