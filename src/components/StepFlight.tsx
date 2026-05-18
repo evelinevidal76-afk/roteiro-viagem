@@ -74,6 +74,18 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
     updateManual('duration', m > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${h}h`)
   }
 
+  const calcArrival = (dep: string, dur: string) => {
+    const [dh, dm] = dep.split(':').map(Number)
+    const match = dur.match(/(\d+)h(\d+)?/)
+    if (!match || isNaN(dh) || isNaN(dm)) return
+    const dHours = parseInt(match[1]) || 0
+    const dMins = parseInt(match[2]) || 0
+    const total = dh * 60 + dm + dHours * 60 + dMins
+    const ah = Math.floor(total / 60) % 24
+    const am = total % 60
+    updateManual('arrival', `${ah.toString().padStart(2, '0')}:${am.toString().padStart(2, '0')}`)
+  }
+
   const handleOriginCode = async (v: string) => {
     const code = v.toUpperCase()
     updateManual('originCode', code)
@@ -94,12 +106,21 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
 
   const handleDeparture = (v: string) => {
     updateManual('departure', v)
-    if (manualData.arrival) calcDuration(v, manualData.arrival)
+    if (manualData.duration && manualData.duration.includes('h')) {
+      calcArrival(v, manualData.duration)
+    } else if (manualData.arrival) {
+      calcDuration(v, manualData.arrival)
+    }
   }
 
   const handleArrival = (v: string) => {
     updateManual('arrival', v)
     if (manualData.departure) calcDuration(manualData.departure, v)
+  }
+
+  const handleDuration = (v: string) => {
+    updateManual('duration', v)
+    if (manualData.departure && v.includes('h')) calcArrival(manualData.departure, v)
   }
 
   return (
@@ -108,7 +129,7 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>Preencha os dados manualmente:</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
         <Field label="Companhia" value={manualData.airline} onChange={v => updateManual('airline', v)} placeholder="Azul, Copa..." />
-        <Field label="Duração" value={manualData.duration} onChange={v => updateManual('duration', v)} placeholder="calculada automaticamente" />
+        <Field label="Duração" value={manualData.duration} onChange={handleDuration} placeholder="calculada automaticamente" />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px 1fr', gap: 8, marginBottom: 8 }}>
         <div>
