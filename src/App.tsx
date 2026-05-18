@@ -1,0 +1,139 @@
+import React, { useState } from 'react'
+import type { WizardData, GeneratedItinerary } from './types'
+import StepFlight from './components/StepFlight'
+import StepCities, { StepProfile, StepStyles, StepTransport } from './components/Steps'
+import StepExtras from './components/StepExtras'
+import ItineraryView from './components/ItineraryView'
+import { generateItinerary } from './services/itineraryService'
+
+const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Detalhes']
+
+const initialData: WizardData = {
+  outboundFlight: null,
+  returnFlight: null,
+  hasReturn: false,
+  citiesCount: 1,
+  travelProfile: null,
+  travelStyles: [],
+  transport: null,
+  travelersCount: 2,
+  notes: '',
+}
+
+export default function App() {
+  const [step, setStep] = useState(0)
+  const [data, setData] = useState<WizardData>(initialData)
+  const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const update = (patch: Partial<WizardData>) =>
+    setData(prev => ({ ...prev, ...patch }))
+
+  const next = () => setStep(s => Math.min(s + 1, STEPS.length - 1))
+  const back = () => setStep(s => Math.max(s - 1, 0))
+
+  const handleGenerate = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await generateItinerary(data)
+      setItinerary(result)
+    } catch (e: any) {
+      setError(e.message || 'Erro ao gerar roteiro')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const restart = () => {
+    setStep(0)
+    setData(initialData)
+    setItinerary(null)
+    setError(null)
+  }
+
+  if (itinerary) {
+    return <ItineraryView itinerary={itinerary} data={data} onRestart={restart} />
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <header style={{
+        padding: '20px 24px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--gold)', fontWeight: 700 }}>
+            Planejador de Roteiros
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            Decifrando Milhas
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Passo {step + 1} de {STEPS.length}
+        </div>
+      </header>
+
+      <div style={{ height: 3, background: 'var(--navy-soft)' }}>
+        <div style={{
+          height: '100%',
+          width: `${((step + 1) / STEPS.length) * 100}%`,
+          background: 'var(--gold)',
+          transition: 'width 0.4s ease',
+        }} />
+      </div>
+
+      <div style={{
+        display: 'flex',
+        borderBottom: '1px solid var(--border)',
+        overflowX: 'auto',
+        padding: '0 24px',
+      }}>
+        {STEPS.map((label, i) => (
+          <button
+            key={label}
+            onClick={() => i < step && setStep(i)}
+            style={{
+              padding: '12px 16px',
+              fontSize: 12,
+              fontWeight: i === step ? 600 : 400,
+              color: i === step ? 'var(--gold)' : i < step ? 'var(--cream)' : 'var(--muted)',
+              background: 'none',
+              border: 'none',
+              borderBottom: i === step ? '2px solid var(--gold)' : '2px solid transparent',
+              whiteSpace: 'nowrap',
+              cursor: i < step ? 'pointer' : 'default',
+              transition: 'all 0.2s',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {i < step ? '✓ ' : ''}{label}
+          </button>
+        ))}
+      </div>
+
+      <main style={{ flex: 1, padding: '32px 24px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
+        {step === 0 && <StepFlight data={data} update={update} onNext={next} />}
+        {step === 1 && <StepCities data={data} update={update} onNext={next} onBack={back} />}
+        {step === 2 && <StepProfile data={data} update={update} onNext={next} onBack={back} />}
+        {step === 3 && <StepStyles data={data} update={update} onNext={next} onBack={back} />}
+        {step === 4 && <StepTransport data={data} update={update} onNext={next} onBack={back} />}
+        {step === 5 && (
+          <StepExtras
+            data={data}
+            update={update}
+            onGenerate={handleGenerate}
+            onBack={back}
+            loading={loading}
+            error={error}
+          />
+        )}
+      </main>
+    </div>
+  )
+}
