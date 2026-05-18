@@ -59,28 +59,24 @@ function FlightLeg({ index, total, flight, onRemove, onEdit }: {
   )
 }
 
-function ManualForm({ manualData, updateManual, onSave, onCancel, error }: {
-  manualData: FlightInfo
-  updateManual: (field: string, v: any) => void
-  onSave: () => void
-  onCancel: () => void
-  error: string | null
+function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: {
+  num: string; manualData: FlightInfo; updateManual: (f: string, v: any) => void
+  onSave: () => void; onCancel: () => void; error: string | null
 }) {
-  // Auto-fill city from airport code
-  const handleOriginCode = (v: string) => {
+  const handleOriginCode = async (v: string) => {
     const code = v.toUpperCase()
     updateManual('originCode', code)
     if (code.length === 3) {
-      const city = getAirportCity(code)
+      const city = await getAirportCity(code)
       if (city) updateManual('origin', city)
     }
   }
 
-  const handleDestCode = (v: string) => {
+  const handleDestCode = async (v: string) => {
     const code = v.toUpperCase()
     updateManual('destinationCode', code)
     if (code.length === 3) {
-      const city = getAirportCity(code)
+      const city = await getAirportCity(code)
       if (city) updateManual('destination', city)
     }
   }
@@ -96,14 +92,16 @@ function ManualForm({ manualData, updateManual, onSave, onCancel, error }: {
       <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px 1fr', gap: 8, marginBottom: 8 }}>
         <div>
           <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Origem</label>
-          <input type="text" value={manualData.originCode} onChange={e => handleOriginCode(e.target.value)}
+          <input type="text" value={manualData.originCode}
+            onChange={e => handleOriginCode(e.target.value)}
             placeholder="GIG" maxLength={3}
             style={{ width: '100%', padding: '8px 10px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 13, textTransform: 'uppercase' }} />
         </div>
         <Field label="Cidade origem" value={manualData.origin} onChange={v => updateManual('origin', v)} placeholder="Rio de Janeiro" />
         <div>
           <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Destino</label>
-          <input type="text" value={manualData.destinationCode} onChange={e => handleDestCode(e.target.value)}
+          <input type="text" value={manualData.destinationCode}
+            onChange={e => handleDestCode(e.target.value)}
             placeholder="CNF" maxLength={3}
             style={{ width: '100%', padding: '8px 10px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 13, textTransform: 'uppercase' }} />
         </div>
@@ -118,35 +116,6 @@ function ManualForm({ manualData, updateManual, onSave, onCancel, error }: {
         <Button variant="ghost" onClick={onCancel}>Cancelar</Button>
       </div>
     </>
-  )
-}
-
-function FlightFormBlock({ title, num, setNum, date, setDate, onSearch, loading, error,
-  manual, manualData, updateManual, onSave, onCancelManual }: any) {
-  return (
-    <Card style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{title}</div>
-      {!manual ? (
-        <>
-          {error && <div style={{ background: 'rgba(226,75,74,0.1)', border: '1px solid rgba(226,75,74,0.4)', borderRadius: 8, padding: '10px 12px', color: '#f09595', fontSize: 12, marginBottom: 12 }}>⚠️ {error}</div>}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-            <div style={{ flex: 2 }}>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>Número do voo</label>
-              <input type="text" value={num} onChange={e => setNum(e.target.value.toUpperCase())} placeholder="Ex: AD4437, CM734"
-                style={{ width: '100%', padding: '10px 12px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 14 }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>Data</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 14 }} />
-            </div>
-          </div>
-          <Button onClick={onSearch} loading={loading} disabled={!num || !date}>🔍 Buscar voo</Button>
-        </>
-      ) : (
-        <ManualForm manualData={manualData} updateManual={updateManual} onSave={onSave} onCancel={onCancelManual} error={error} />
-      )}
-    </Card>
   )
 }
 
@@ -171,20 +140,22 @@ export default function StepFlight({ data, update, onNext }: Props) {
 
   const resetForm = () => { setNum(''); setDate(''); setError(null); setManual(false); setManualData(emptyManual()) }
 
-  // Auto-fill airline from flight number
+  // Auto-fill airline from flight number when entering manual mode
   useEffect(() => {
-    if (num.length >= 2 && manual) {
-      const airline = getAirlineName(num)
-      if (airline) setManualData(prev => ({ ...prev, airline }))
+    if (manual && num.length >= 2 && !manualData.airline) {
+      getAirlineName(num).then(name => {
+        if (name) setManualData(prev => ({ ...prev, airline: name }))
+      })
     }
-  }, [num, manual])
+  }, [manual, num])
 
   useEffect(() => {
-    if (returnNum.length >= 2 && returnManual) {
-      const airline = getAirlineName(returnNum)
-      if (airline) setReturnManualData(prev => ({ ...prev, airline }))
+    if (returnManual && returnNum.length >= 2 && !returnManualData.airline) {
+      getAirlineName(returnNum).then(name => {
+        if (name) setReturnManualData(prev => ({ ...prev, airline: name }))
+      })
     }
-  }, [returnNum, returnManual])
+  }, [returnManual, returnNum])
 
   const handleSearch = async () => {
     if (!num || !date) { setError('Preencha número e data'); return }
@@ -193,7 +164,7 @@ export default function StepFlight({ data, update, onNext }: Props) {
       const flight = await fetchFlight(num, date)
       saveLeg(flight)
     } catch {
-      const airline = getAirlineName(num)
+      const airline = await getAirlineName(num)
       setError('Voo não encontrado. Preencha manualmente:')
       setManual(true)
       setManualData({ ...emptyManual(num, date), airline })
@@ -237,7 +208,7 @@ export default function StepFlight({ data, update, onNext }: Props) {
       const flight = await fetchFlight(returnNum, returnDate)
       update({ returnFlight: flight }); setReturnConfirmed(true); setReturnManual(false)
     } catch {
-      const airline = getAirlineName(returnNum)
+      const airline = await getAirlineName(returnNum)
       setReturnError('Voo não encontrado. Preencha manualmente:')
       setReturnManual(true)
       setReturnManualData({ ...emptyManual(returnNum, returnDate), airline })
@@ -253,6 +224,8 @@ export default function StepFlight({ data, update, onNext }: Props) {
   }
 
   const destination = legs.length > 0 ? legs[legs.length - 1].destinationCode : null
+
+  const inputStyle = { width: '100%', padding: '10px 12px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 14 }
 
   return (
     <div className="fade-up">
@@ -274,15 +247,31 @@ export default function StepFlight({ data, update, onNext }: Props) {
       )}
 
       {adding && (
-        <FlightFormBlock
-          title={editIndex !== null ? `Editar voo ${editIndex + 1}` : legs.length === 0 ? 'Primeiro voo da ida' : `Adicionar voo ${legs.length + 1}`}
-          num={num} setNum={setNum} date={date} setDate={setDate}
-          onSearch={handleSearch} loading={loading} error={error}
-          manual={manual} manualData={manualData}
-          updateManual={(field: string, v: any) => setManualData((prev: FlightInfo) => ({ ...prev, [field]: v }))}
-          onSave={saveManual}
-          onCancelManual={() => { setManual(false); setError(null) }}
-        />
+        <Card style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            {editIndex !== null ? `Editar voo ${editIndex + 1}` : legs.length === 0 ? 'Primeiro voo da ida' : `Adicionar voo ${legs.length + 1}`}
+          </div>
+          {!manual ? (
+            <>
+              {error && <div style={{ background: 'rgba(226,75,74,0.1)', border: '1px solid rgba(226,75,74,0.4)', borderRadius: 8, padding: '10px 12px', color: '#f09595', fontSize: 12, marginBottom: 12 }}>⚠️ {error}</div>}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                <div style={{ flex: 2 }}>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>Número do voo</label>
+                  <input type="text" value={num} onChange={e => setNum(e.target.value.toUpperCase())} placeholder="Ex: AD4437, CM734" style={inputStyle} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>Data</label>
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+                </div>
+              </div>
+              <Button onClick={handleSearch} loading={loading} disabled={!num || !date}>🔍 Buscar voo</Button>
+            </>
+          ) : (
+            <ManualForm num={num} manualData={manualData}
+              updateManual={(f, v) => setManualData(prev => ({ ...prev, [f]: v }))}
+              onSave={saveManual} onCancel={() => { setManual(false); setError(null) }} error={error} />
+          )}
+        </Card>
       )}
 
       {!adding && (
@@ -309,23 +298,19 @@ export default function StepFlight({ data, update, onNext }: Props) {
                 <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
                   <div style={{ flex: 2 }}>
                     <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>Número do voo</label>
-                    <input type="text" value={returnNum} onChange={e => setReturnNum(e.target.value.toUpperCase())} placeholder="Ex: CM735"
-                      style={{ width: '100%', padding: '10px 12px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 14 }} />
+                    <input type="text" value={returnNum} onChange={e => setReturnNum(e.target.value.toUpperCase())} placeholder="Ex: CM735" style={inputStyle} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>Data</label>
-                    <input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 14 }} />
+                    <input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} style={inputStyle} />
                   </div>
                 </div>
                 <Button onClick={handleSearchReturn} loading={returnLoading} disabled={!returnNum || !returnDate}>🔍 Buscar voo de retorno</Button>
               </>
             ) : (
-              <ManualForm manualData={returnManualData}
-                updateManual={(field: string, v: any) => setReturnManualData((prev: FlightInfo) => ({ ...prev, [field]: v }))}
-                onSave={saveReturnManual}
-                onCancel={() => { setReturnManual(false); setReturnError(null) }}
-                error={returnError} />
+              <ManualForm num={returnNum} manualData={returnManualData}
+                updateManual={(f, v) => setReturnManualData(prev => ({ ...prev, [f]: v }))}
+                onSave={saveReturnManual} onCancel={() => { setReturnManual(false); setReturnError(null) }} error={returnError} />
             )}
           </Card>
         )}
