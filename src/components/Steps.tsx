@@ -12,8 +12,8 @@ export default function StepCities({
         title="Quantas cidades? 🗺️"
         subtitle="Quantas cidades base você quer incluir no roteiro?"
       />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 32 }}>
-        {[1, 2, 3, 4].map(n => (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
+        {[1, 2, 3, 4, 5, 6].map(n => (
           <Card
             key={n}
             selected={data.citiesCount === n}
