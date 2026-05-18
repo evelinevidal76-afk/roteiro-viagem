@@ -63,6 +63,28 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
   num: string; manualData: FlightInfo; updateManual: (f: string, v: any) => void
   onSave: () => void; onCancel: () => void; error: string | null
 }) {
+  const calcDuration = (dep: string, arr: string, updateFn: (f: string, v: any) => void) => {
+    if (!dep || !arr) return
+    const [dh, dm] = dep.split(':').map(Number)
+    const [ah, am] = arr.split(':').map(Number)
+    if (isNaN(dh) || isNaN(dm) || isNaN(ah) || isNaN(am)) return
+    let diff = (ah * 60 + am) - (dh * 60 + dm)
+    if (diff < 0) diff += 24 * 60
+    const h = Math.floor(diff / 60)
+    const m = diff % 60
+    updateFn('duration', m > 0 ? `${h}h${m.toString().padStart(2,'0')}` : `${h}h`)
+  }
+
+  const handleDeparture = (v: string) => {
+    updateManual('departure', v)
+    if (manualData.arrival) calcDuration(v, manualData.arrival, updateManual)
+  }
+
+  const handleArrival = (v: string) => {
+    updateManual('arrival', v)
+    if (manualData.departure) calcDuration(manualData.departure, v, updateManual)
+  }
+
   const handleOriginCode = async (v: string) => {
     const code = v.toUpperCase()
     updateManual('originCode', code)
@@ -108,8 +130,8 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
         <Field label="Cidade destino" value={manualData.destination} onChange={v => updateManual('destination', v)} placeholder="Belo Horizonte" />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
-        <Field label="Partida" value={manualData.departure} onChange={v => updateManual('departure', v)} placeholder="17:10" />
-        <Field label="Chegada" value={manualData.arrival} onChange={v => updateManual('arrival', v)} placeholder="18:15" />
+        <Field label="Partida" value={manualData.departure} onChange={handleDeparture} placeholder="17:10" />
+        <Field label="Chegada" value={manualData.arrival} onChange={handleArrival} placeholder="18:15" />
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
         <Button onClick={onSave}>✓ Confirmar voo</Button>
