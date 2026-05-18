@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react'
-import type { WizardData, GeneratedItinerary } from './types'
+import React, { useState, useEffect, useRef } from 'react'
+import type { WizardData } from './types'
 import StepFlight from './components/StepFlight'
 import StepCities, { StepProfile, StepStyles, StepTransport } from './components/Steps'
 import StepExtras from './components/StepExtras'
 import ItineraryView from './components/ItineraryView'
-import { generateItinerary } from './services/itineraryService'
+import { generateItineraryStream } from './services/itineraryService'
 import { salvarEstado, salvarRoteiro, recuperarSessao, getSessaoId, clearSessaoId } from './services/dbService'
 
 const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Detalhes']
@@ -28,13 +28,13 @@ const initialData: WizardData = {
 export default function App() {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<WizardData>(initialData)
-  const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(null)
+  const [itineraryHtml, setItineraryHtml] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [restoring, setRestoring] = useState(true)
   const [saving, setSaving] = useState(false)
+  const htmlRef = useRef('')
 
-  // Restaura sessão ao abrir
   useEffect(() => {
     const sessaoId = getSessaoId()
     if (sessaoId) {
@@ -54,7 +54,6 @@ export default function App() {
   const update = async (patch: Partial<WizardData>) => {
     const next = { ...data, ...patch }
     setData(next)
-    // Salva no banco em background
     setSaving(true)
     try { await salvarEstado(next) } catch {}
     setSaving(false)
@@ -69,22 +68,36 @@ export default function App() {
   const back = () => goToStep(Math.max(step - 1, 0))
 
   const handleGenerate = async () => {
-    setLoading(true); setError(null)
-    try {
-      const result = await generateItinerary(data)
-      setItinerary(result)
-      const sessaoId = getSessaoId()
-      if (sessaoId) await salvarRoteiro(sessaoId, result)
-    } catch (e: any) {
-      setError(e.message || 'Erro ao gerar roteiro')
-    } finally { setLoading(false) }
+    setLoading(true)
+    setError(null)
+    htmlRef.current = ''
+    setItineraryHtml('')
+
+    generateItineraryStream(
+      data,
+      (chunk) => {
+        htmlRef.current += chunk
+        setItineraryHtml(htmlRef.current)
+      },
+      () => {
+        setLoading(false)
+      },
+      (msg) => {
+        setError(msg)
+        setLoading(false)
+        setItineraryHtml(null)
+      }
+    )
   }
 
   const restart = () => {
     clearSessaoId()
     localStorage.removeItem(LS_KEY)
-    setStep(0); setData(initialData)
-    setItinerary(null); setError(null)
+    setStep(0)
+    setData(initialData)
+    setItineraryHtml(null)
+    setError(null)
+    htmlRef.current = ''
   }
 
   if (restoring) {
@@ -98,8 +111,8 @@ export default function App() {
     )
   }
 
-  if (itinerary) {
-    return <ItineraryView itinerary={itinerary} data={data} onRestart={restart} />
+  if (itineraryHtml !== null) {
+    return <ItineraryView html={itineraryHtml} loading={loading} data={data} onRestart={restart} />
   }
 
   return (
@@ -136,27 +149,3 @@ export default function App() {
               whiteSpace: 'nowrap', cursor: i < step ? 'pointer' : 'default',
               transition: 'all 0.2s', fontFamily: 'var(--font-body)',
             }}>
-            {i < step ? '✓ ' : ''}{label}
-          </button>
-        ))}
-      </div>
-
-      {step > 0 && (
-        <div style={{ padding: '6px 24px', background: 'rgba(201,151,60,0.06)', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ color: 'var(--gold)' }}>●</span> Progresso salvo automaticamente no banco de dados
-        </div>
-      )}
-
-      <main style={{ flex: 1, padding: '32px 24px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
-        {step === 0 && <StepFlight data={data} update={update} onNext={next} />}
-        {step === 1 && <StepCities data={data} update={update} onNext={next} onBack={back} />}
-        {step === 2 && <StepProfile data={data} update={update} onNext={next} onBack={back} />}
-        {step === 3 && <StepStyles data={data} update={update} onNext={next} onBack={back} />}
-        {step === 4 && <StepTransport data={data} update={update} onNext={next} onBack={back} />}
-        {step === 5 && (
-          <StepExtras data={data} update={update} onGenerate={handleGenerate} onBack={back} loading={loading} error={error} />
-        )}
-      </main>
-    </div>
-  )
-}
