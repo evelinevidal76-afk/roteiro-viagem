@@ -274,58 +274,6 @@ export default function StepHotel({ data, update, onNext, onBack }: Props) {
                 </div>
               )}
 
-              {/* Imagens do hotel (opcional) */}
-              {choices[i]?.name.trim() && (
-                <div style={{ marginTop: 14 }}>
-                  <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
-                    Foto do hotel (URL, opcional)
-                  </label>
-                  <input
-                    type="url"
-                    value={choices[i]?.imageUrl || ''}
-                    onChange={e => updateChoice(i, { imageUrl: e.target.value })}
-                    placeholder="https://..."
-                    style={{
-                      width: '100%', padding: '8px 12px', boxSizing: 'border-box',
-                      background: '#111827', border: '1px solid var(--border)',
-                      borderRadius: 8, color: 'var(--cream)', fontSize: 12,
-                      fontFamily: 'var(--font-body)',
-                    }}
-                  />
-                  {choices[i]?.imageUrl && (
-                    <img
-                      src={choices[i].imageUrl}
-                      alt="Hotel"
-                      style={{ marginTop: 6, width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }}
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
-                  )}
-
-                  <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4, marginTop: 10 }}>
-                    Foto do quarto (URL, opcional)
-                  </label>
-                  <input
-                    type="url"
-                    value={choices[i]?.roomImageUrl || ''}
-                    onChange={e => updateChoice(i, { roomImageUrl: e.target.value })}
-                    placeholder="https://..."
-                    style={{
-                      width: '100%', padding: '8px 12px', boxSizing: 'border-box',
-                      background: '#111827', border: '1px solid var(--border)',
-                      borderRadius: 8, color: 'var(--cream)', fontSize: 12,
-                      fontFamily: 'var(--font-body)',
-                    }}
-                  />
-                  {choices[i]?.roomImageUrl && (
-                    <img
-                      src={choices[i].roomImageUrl}
-                      alt="Quarto"
-                      style={{ marginTop: 6, width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }}
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
-                  )}
-                </div>
-              )}
             </div>
           ))}
         </div>

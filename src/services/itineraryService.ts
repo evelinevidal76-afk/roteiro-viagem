@@ -199,7 +199,12 @@ export async function generateDay(
     .filter(Boolean)
     .join('\n')
 
-  const prompt = `Voce e um especialista em viagens de luxo. Crie o roteiro do Dia ${dayIndex + 1} de ${totalDays} de uma viagem.
+  // Para o Dia 1, inclui horário de chegada para planejar corretamente
+  const arrivalNote = dayIndex === 0 && outLegs.length > 0
+    ? `\nIMPORTANTE — DIA DE CHEGADA: O voo de ida chega às ${outLegs[outLegs.length - 1].arrival} no destino. Considere pelo menos 1h para desembarque/imigração/bagagem e traslado ao hotel. NÃO coloque atividades antes da chegada. Se o voo chegar após as 14h, inicie com check-in, descanso e no máximo 1 atividade leve à tarde/noite.`
+    : ''
+
+  const prompt = `Você é um especialista em viagens de luxo. Crie o roteiro do Dia ${dayIndex + 1} de ${totalDays} de uma viagem em HTML com design de livreto de viagem — limpo, inspirador, fundo branco.
 
 DADOS DA VIAGEM:
 - Destino: ${destino}
@@ -209,26 +214,50 @@ DADOS DA VIAGEM:
 - Transporte local: ${data.transport}
 - Viajantes: ${data.travelersCount}
 - Data do dia: ${dayLabel}
-- Observacoes: ${data.notes || 'nenhuma'}${hoteisNota}${previousNote}${regenerateNote}
+- Observações: ${data.notes || 'nenhuma'}${hoteisNota}${previousNote}${regenerateNote}${arrivalNote}
 ${regrasRefeicoesDia ? `\nREGRAS DE REFEIÇÕES (siga obrigatoriamente):\n${regrasRefeicoesDia}` : ''}
 
-Gere HTML apenas para ESTE DIA com:
-- Titulo do dia (Dia ${dayIndex + 1} - ${dayLabel})
-- 5 a 7 atividades com horario, titulo, descricao curta, dica e custo estimado
-- Para cada atividade de passeio ou restaurante, inclua uma imagem usando: <img src="https://loremflickr.com/800/200/{palavras-chave-em-ingles-separadas-por-virgula}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:180px" loading="lazy" alt="{nome da atividade}" onerror="this.style.display='none'">
-- Sugestao de restaurante para almoco${regrasRefeicoesDia.includes('jantar') ? '' : ' e jantar'}
+ESTRUTURA HTML OBRIGATÓRIA — use exatamente este layout:
 
-Use estilos inline dark/dourado:
-- Card do dia: background:#1a2235; border:1px solid #2d3a52; border-radius:12px; padding:20px; margin-bottom:16px
-- Titulo: color:#c9973c; font-size:20px; font-weight:700; margin-bottom:16px
-- Horarios: color:#c9973c; font-weight:600; font-size:13px
-- Titulos atividade: color:#f0e6d3; font-weight:600; font-size:15px
-- Descricoes: color:#8892a4; font-size:13px; line-height:1.6
-- Dicas: background:rgba(201,151,60,0.08); border:1px solid #2d3a52; border-radius:8px; padding:8px 12px; color:#c9973c; font-size:12px; margin-top:8px
+<div style="font-family:'Helvetica Neue',Arial,sans-serif;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 40px rgba(0,0,0,0.12);margin-bottom:28px;">
 
-IMPORTANTE: qualquer link do Booking.com deve conter obrigatoriamente o parâmetro &aid=7962462 na URL.
+  <!-- COVER: imagem de capa full-width do destino/cidade do dia -->
+  <div style="position:relative;overflow:hidden;">
+    <img src="https://loremflickr.com/800/280/{city},{destination},travel,landscape" style="width:100%;height:240px;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display='none'" alt="Dia ${dayIndex + 1}">
+    <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.05) 30%,rgba(0,0,0,0.72));display:flex;flex-direction:column;justify-content:flex-end;padding:28px;">
+      <div style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">DIA ${dayIndex + 1} DE ${totalDays}</div>
+      <div style="color:#ffffff;font-size:24px;font-weight:700;line-height:1.2;">{titulo do dia e data}</div>
+    </div>
+  </div>
 
-Responda APENAS com o HTML, sem markdown, sem explicacoes.`
+  <!-- ATIVIDADES -->
+  <div style="padding:8px 28px 20px;">
+
+    <!-- Repita este bloco para cada atividade (5 a 7 no total) -->
+    <div style="padding:22px 0;border-bottom:1px solid #f3efe8;">
+      <div style="color:#c9973c;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">09:00 — 10:30</div>
+      <div style="color:#111827;font-size:16px;font-weight:600;margin-bottom:10px;">Nome da Atividade</div>
+      <img src="https://loremflickr.com/800/220/{activity-keywords-in-english}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px;" loading="lazy" onerror="this.style.display='none'" alt="atividade">
+      <p style="color:#4b5563;font-size:13px;line-height:1.75;margin:0 0 12px;">Descrição da atividade</p>
+      <div style="background:#fffbf2;border-left:3px solid #c9973c;border-radius:0 8px 8px 0;padding:10px 14px;color:#92400e;font-size:12px;line-height:1.55;margin-bottom:10px;">💡 Dica prática</div>
+      <span style="color:#c9973c;font-size:12px;font-weight:600;">💰 Custo estimado: valor</span>
+    </div>
+
+  </div>
+
+  <!-- HOTÉIS (apenas se houver hotel confirmado na cidade, coloque ao final do dia) -->
+  <!-- Para cada hotel confirmado: gere link Booking.com direto para o hotel: https://www.booking.com/searchresults.html?ss={nome+do+hotel}+{cidade}&aid=7962462 -->
+  <!-- Use imagem automática: <img src="https://loremflickr.com/800/260/{hotel-name},{city},hotel,lobby" ...> -->
+
+</div>
+
+REGRAS:
+- Imagens: use loremflickr.com com palavras-chave em inglês específicas do local (ex: quinta+avenida,playa+del+carmen,beach para a Quinta Avenida)
+- Para restaurantes: use keywords como restaurant,{cuisine-type},{city}
+- Sugestão de ${regrasRefeicoesDia.includes('almoço') ? 'almoço' : 'almoço e jantar'} com nome real do restaurante, link Booking/Google Maps e imagem automática
+- Links Booking.com sempre com &aid=7962462
+
+Responda APENAS com o HTML, sem markdown, sem explicações.`
 
   try {
     const res = await fetch('/api/generate', {
