@@ -147,7 +147,8 @@ export async function generateDay(
   attempt: number,
   onChunk: (html: string) => void,
   onDone: () => void,
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  activitiesToChange?: string[]
 ) {
   const outLegs = (data as any).outboundLegs || (data.outboundFlight ? [data.outboundFlight] : [])
   const cities = (data as any).cities || []
@@ -159,9 +160,11 @@ export async function generateDay(
   dayDate.setDate(dayDate.getDate() + dayIndex)
   const dayLabel = dayDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  const regenerateNote = attempt > 0
-    ? `\n\nNOTA: Esta e a tentativa ${attempt + 1}. Sugira atividades completamente diferentes das anteriores para este dia.`
-    : ''
+  const regenerateNote = activitiesToChange && activitiesToChange.length > 0
+    ? `\n\nSUBSTITUIÇÃO PARCIAL OBRIGATÓRIA: Mantenha TODAS as atividades deste dia EXATAMENTE como estão, EXCETO as listadas abaixo, que devem ser substituídas por alternativas completamente diferentes (mesmo horário, mesmo tipo de atividade, mas locais/restaurantes/experiências diferentes):\n${activitiesToChange.map(a => `  - ${a}`).join('\n')}`
+    : attempt > 0
+      ? `\n\nNOTA: Esta e a tentativa ${attempt + 1}. Sugira atividades completamente diferentes das anteriores para este dia.`
+      : ''
 
   const previousNote = previousDays.length > 0
     ? `\n\nDias ja aprovados: ${previousDays.length} dia(s). Nao repita atividades ou restaurantes dos dias anteriores.`
