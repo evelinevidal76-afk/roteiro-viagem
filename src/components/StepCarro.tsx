@@ -43,7 +43,7 @@ const CAR_OPTIONS: CarOption[] = [
 
 function buildRentalcarsUrl(destination: string, pickup: string, dropoff: string) {
   const dest = encodeURIComponent(destination)
-  return `https://www.rentalcars.com/pt/?affiliateCode=SEUID&preflang=pt&adplat=meta&pickup=${dest}&pickupDate=${pickup}&dropoffDate=${dropoff}`
+  return `https://www.rentalcars.com/pt/?affiliateCode=7962462&preflang=pt&adplat=meta&pickup=${dest}&pickupDate=${pickup}&dropoffDate=${dropoff}`
 }
 
 export default function StepCarro({ data, update, onNext, onBack }: Props) {
