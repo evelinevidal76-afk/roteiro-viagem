@@ -87,8 +87,8 @@ ${voosRetorno || '  Não informado'}
 Gere HTML completo com estas seções:
 - Cabeçalho com destino, resumo e custo estimado total
 - Um bloco por dia com título do dia, data e lista de atividades (horário, título, descrição, dica, custo estimado)
-- Para cada atividade de passeio ou restaurante, inclua uma imagem usando: <img src="https://source.unsplash.com/featured/800x200/?{palavras-chave-em-inglês}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:180px" loading="lazy" alt="{nome da atividade}">
-- Seção de hospedagem confirmada com os hotéis escolhidos (ou sugestões genéricas se não informado). Se o hotel tem imagens fornecidas, exiba-as com <img src="{url}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:220px" loading="lazy">
+- Para cada atividade de passeio ou restaurante, inclua uma imagem usando: <img src="https://loremflickr.com/800/200/{palavras-chave-em-ingles-separadas-por-virgula}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:180px" loading="lazy" alt="{nome da atividade}" onerror="this.style.display='none'">
+- Seção de hospedagem confirmada com os hotéis escolhidos (ou sugestões genéricas se não informado). Se o hotel tem imagens fornecidas, exiba-as com <img src="{url}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:220px" loading="lazy" onerror="this.style.display='none'">
 
 Use estas classes CSS inline para estilo dark/dourado:
 - Fundo dos cards: background:#1a2235; border:1px solid #2d3a52; border-radius:12px; padding:20px; margin-bottom:16px
@@ -215,7 +215,7 @@ ${regrasRefeicoesDia ? `\nREGRAS DE REFEIÇÕES (siga obrigatoriamente):\n${regr
 Gere HTML apenas para ESTE DIA com:
 - Titulo do dia (Dia ${dayIndex + 1} - ${dayLabel})
 - 5 a 7 atividades com horario, titulo, descricao curta, dica e custo estimado
-- Para cada atividade de passeio ou restaurante, inclua uma imagem usando: <img src="https://source.unsplash.com/featured/800x200/?{palavras-chave-em-ingles-do-local}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:180px" loading="lazy" alt="{nome da atividade}">
+- Para cada atividade de passeio ou restaurante, inclua uma imagem usando: <img src="https://loremflickr.com/800/200/{palavras-chave-em-ingles-separadas-por-virgula}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:180px" loading="lazy" alt="{nome da atividade}" onerror="this.style.display='none'">
 - Sugestao de restaurante para almoco${regrasRefeicoesDia.includes('jantar') ? '' : ' e jantar'}
 
 Use estilos inline dark/dourado:

@@ -9,6 +9,7 @@ interface Props {
   totalDays: number
   previousDays: string[]
   onApprove: (html: string) => void
+  onBack?: (step?: number) => void
 }
 
 // Extrai lista de atividades do HTML gerado (horário + título)
@@ -32,13 +33,14 @@ function extractActivities(html: string): Array<{ time: string; title: string }>
   return results
 }
 
-export default function DayApproval({ data, dayIndex, totalDays, previousDays, onApprove }: Props) {
+export default function DayApproval({ data, dayIndex, totalDays, previousDays, onApprove, onBack }: Props) {
   const [html, setHtml] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [activitiesToChange, setActivitiesToChange] = useState<string[]>([])
   const [showSelector, setShowSelector] = useState(false)
+  const [showBackMenu, setShowBackMenu] = useState(false)
   const [activities, setActivities] = useState<Array<{ time: string; title: string }>>([])
   const htmlRef = useRef('')
 
@@ -119,6 +121,55 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
             {dayIndex} de {totalDays} dias aprovados
           </div>
         </div>
+
+        {onBack && (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowBackMenu(v => !v)}
+              style={{
+                padding: '7px 14px', fontSize: 12, background: 'transparent',
+                border: '1px solid var(--border)', borderRadius: 8,
+                color: 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+              }}
+            >
+              ← Editar viagem
+            </button>
+            {showBackMenu && (
+              <div style={{
+                position: 'absolute', right: 0, top: 'calc(100% + 8px)',
+                background: '#1a2235', border: '1px solid var(--border)',
+                borderRadius: 10, padding: '8px 0', minWidth: 220, zIndex: 100,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              }}>
+                {[
+                  { label: '✈️ Voos', step: 0 },
+                  { label: '🗺️ Destinos e cidades', step: 1 },
+                  { label: '👤 Perfil de viagem', step: 2 },
+                  { label: '🎯 Estilos', step: 3 },
+                  { label: '🚗 Transporte', step: 4 },
+                  { label: '🏨 Hotéis', step: 5 },
+                  { label: '📝 Detalhes e observações', step: 7 },
+                ].map(item => (
+                  <button
+                    key={item.step}
+                    onClick={() => { setShowBackMenu(false); onBack(item.step) }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '10px 16px', fontSize: 13,
+                      background: 'none', border: 'none',
+                      color: 'var(--cream)', cursor: 'pointer',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(201,151,60,0.08)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
       {/* Conteudo streamado */}

@@ -174,6 +174,20 @@ export default function App() {
     }
   }
 
+  const handleBackToWizard = (targetStep?: number) => {
+    setMode('wizard')
+    const s = targetStep ?? step
+    goToStep(s)
+    saveProgress({
+      mode: 'wizard',
+      approvedDays,
+      currentDayIndex,
+      totalDays,
+      fullItineraryHtml,
+      selectedHotels: data.selectedHotels || [],
+    })
+  }
+
   const handleGenerate = () => {
     const days = calculateTotalDays(data)
     setTotalDays(days)
@@ -257,6 +271,7 @@ export default function App() {
         totalDays={totalDays}
         previousDays={approvedDays}
         onApprove={handleApproveDay}
+        onBack={handleBackToWizard}
       />
     )
   }
