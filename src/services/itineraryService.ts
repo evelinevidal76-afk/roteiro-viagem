@@ -89,3 +89,93 @@ Responda APENAS com o HTML, sem markdown, sem explicações.`
     onError(e.message || 'Erro desconhecido')
   }
 }
+
+export async function generateDay(
+  data: WizardData,
+  dayIndex: number,
+  totalDays: number,
+  previousDays: string[],
+  attempt: number,
+  onChunk: (html: string) => void,
+  onDone: () => void,
+  onError: (msg: string) => void
+) {
+  const outLegs = (data as any).outboundLegs || (data.outboundFlight ? [data.outboundFlight] : [])
+  const cities = (data as any).cities || []
+  const destino = outLegs.length > 0 ? outLegs[outLegs.length - 1].destinationCode : '?'
+  const cidadesTexto = cities.length > 0 ? cities.join(', ') : destino
+
+  const dateBase = outLegs.length > 0 ? new Date(outLegs[0].date) : new Date()
+  const dayDate = new Date(dateBase)
+  dayDate.setDate(dayDate.getDate() + dayIndex)
+  const dayLabel = dayDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  const regenerateNote = attempt > 0
+    ? `\n\nNOTA: Esta e a tentativa ${attempt + 1}. Sugira atividades completamente diferentes das anteriores para este dia.`
+    : ''
+
+  const previousNote = previousDays.length > 0
+    ? `\n\nDias ja aprovados: ${previousDays.length} dia(s). Nao repita atividades ou restaurantes dos dias anteriores.`
+    : ''
+
+  const prompt = `Voce e um especialista em viagens de luxo. Crie o roteiro do Dia ${dayIndex + 1} de ${totalDays} de uma viagem.
+
+DADOS DA VIAGEM:
+- Destino: ${destino}
+- Cidades: ${cidadesTexto}
+- Perfil: ${data.travelProfile}
+- Estilos: ${data.travelStyles?.join(', ')}
+- Transporte local: ${data.transport}
+- Viajantes: ${data.travelersCount}
+- Data do dia: ${dayLabel}
+- Observacoes: ${data.notes || 'nenhuma'}${previousNote}${regenerateNote}
+
+Gere HTML apenas para ESTE DIA com:
+- Titulo do dia (Dia ${dayIndex + 1} - ${dayLabel})
+- 5 a 7 atividades com horario, titulo, descricao curta, dica e custo estimado
+- Sugestao de restaurante para almoco e jantar
+
+Use estilos inline dark/dourado:
+- Card do dia: background:#1a2235; border:1px solid #2d3a52; border-radius:12px; padding:20px; margin-bottom:16px
+- Titulo: color:#c9973c; font-size:20px; font-weight:700; margin-bottom:16px
+- Horarios: color:#c9973c; font-weight:600; font-size:13px
+- Titulos atividade: color:#f0e6d3; font-weight:600; font-size:15px
+- Descricoes: color:#8892a4; font-size:13px; line-height:1.6
+- Dicas: background:rgba(201,151,60,0.08); border:1px solid #2d3a52; border-radius:8px; padding:8px 12px; color:#c9973c; font-size:12px; margin-top:8px
+
+Responda APENAS com o HTML, sem markdown, sem explicacoes.`
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+
+    if (!res.ok) throw new Error('Erro ao conectar com o servidor')
+
+    const reader = res.body!.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const raw = line.slice(6)
+        if (raw === '[DONE]') { onDone(); return }
+        try {
+          const { text } = JSON.parse(raw)
+          if (text) onChunk(text)
+        } catch {}
+      }
+    }
+    onDone()
+  } catch (e: any) {
+    onError(e.message || 'Erro desconhecido')
+  }
+}

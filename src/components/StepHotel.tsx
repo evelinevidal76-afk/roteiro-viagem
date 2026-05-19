@@ -52,14 +52,38 @@ Responda APENAS com JSON valido neste formato, sem markdown:
   }
 ]`
 
-    fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    })
-      .then(r => r.json())
-      .then(({ text }) => {
-        const clean = text.replace(/```json|```/g, '').trim()
+    async function fetchHotels() {
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        })
+        if (!res.ok) throw new Error('Erro ao conectar')
+
+        const reader = res.body!.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let fullText = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const raw = line.slice(6)
+            if (raw === '[DONE]') break
+            try {
+              const { text } = JSON.parse(raw)
+              if (text) fullText += text
+            } catch {}
+          }
+        }
+
+        const clean = fullText.replace(/```json|```/g, '').trim()
         const start = clean.indexOf('[')
         const end = clean.lastIndexOf(']')
         const parsed: Omit<Hotel, 'bookingUrl'>[] = JSON.parse(clean.slice(start, end + 1))
@@ -68,11 +92,12 @@ Responda APENAS com JSON valido neste formato, sem markdown:
           bookingUrl: buildBookingUrl(h.name + ' ' + destino, checkIn, checkOut),
         })))
         setLoading(false)
-      })
-      .catch(() => {
+      } catch {
         setError('Erro ao buscar sugestoes de hoteis')
         setLoading(false)
-      })
+      }
+    }
+    fetchHotels()
   }, [])
 
   const handleSelect = (i: number) => {

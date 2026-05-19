@@ -1,15 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import type { WizardData } from './types'
 import StepFlight from './components/StepFlight'
 import StepCities, { StepProfile, StepStyles, StepTransport } from './components/Steps'
 import StepHotel from './components/StepHotel'
+import StepCarro from './components/StepCarro'
 import StepExtras from './components/StepExtras'
 import ItineraryView from './components/ItineraryView'
-import { generateItineraryStream } from './services/itineraryService'
+import DayApproval from './components/DayApproval'
 import { salvarEstado, recuperarSessao, getSessaoId, clearSessaoId } from './services/dbService'
 
-const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Hotel', 'Detalhes']
+const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Hotel', 'Carro', 'Detalhes']
 const LS_KEY = 'decifrando_roteiros_step'
+
+type AppMode = 'wizard' | 'dayApproval' | 'fullItinerary'
 
 const initialData: WizardData = {
   outboundFlight: null,
@@ -26,15 +29,35 @@ const initialData: WizardData = {
   notes: '',
 }
 
+function calculateTotalDays(data: WizardData): number {
+  const outLegs = (data as any).outboundLegs || (data.outboundFlight ? [data.outboundFlight] : [])
+  const retLegs = (data as any).returnLegs || (data.returnFlight ? [data.returnFlight] : [])
+
+  if (outLegs.length === 0) return 5
+
+  const outDate = new Date(outLegs[0].date)
+  if (retLegs.length > 0) {
+    const retDate = new Date(retLegs[0].date)
+    const diff = Math.round((retDate.getTime() - outDate.getTime()) / (1000 * 60 * 60 * 24))
+    return Math.max(1, Math.min(diff, 21))
+  }
+  return 5
+}
+
+function usesCarRental(data: WizardData) {
+  return data.transport === 'carro' || data.transport === 'misto'
+}
+
 export default function App() {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<WizardData>(initialData)
-  const [itineraryHtml, setItineraryHtml] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [mode, setMode] = useState<AppMode>('wizard')
+  const [approvedDays, setApprovedDays] = useState<string[]>([])
+  const [currentDayIndex, setCurrentDayIndex] = useState(0)
+  const [totalDays, setTotalDays] = useState(0)
+  const [fullItineraryHtml, setFullItineraryHtml] = useState<string | null>(null)
   const [restoring, setRestoring] = useState(true)
   const [saving, setSaving] = useState(false)
-  const htmlRef = useRef('')
 
   useEffect(() => {
     const sessaoId = getSessaoId()
@@ -65,28 +88,48 @@ export default function App() {
     localStorage.setItem(LS_KEY, String(s))
   }
 
-  const next = () => goToStep(Math.min(step + 1, STEPS.length - 1))
-  const back = () => goToStep(Math.max(step - 1, 0))
+  // step 6 = Carro, skip if transport nao usa carro
+  const next = () => {
+    const nextStep = step + 1
+    if (nextStep === 6 && !usesCarRental(data)) {
+      goToStep(7)
+    } else {
+      goToStep(Math.min(nextStep, STEPS.length - 1))
+    }
+  }
 
-  const handleGenerate = async () => {
-    setLoading(true)
-    setError(null)
-    htmlRef.current = ''
-    setItineraryHtml('')
+  const back = () => {
+    const prevStep = step - 1
+    if (prevStep === 6 && !usesCarRental(data)) {
+      goToStep(5)
+    } else {
+      goToStep(Math.max(prevStep, 0))
+    }
+  }
 
-    generateItineraryStream(
-      data,
-      (chunk) => {
-        htmlRef.current += chunk
-        setItineraryHtml(htmlRef.current)
-      },
-      () => { setLoading(false) },
-      (msg) => {
-        setError(msg)
-        setLoading(false)
-        setItineraryHtml(null)
-      }
-    )
+  const handleGenerate = () => {
+    const days = calculateTotalDays(data)
+    setTotalDays(days)
+    setCurrentDayIndex(0)
+    setApprovedDays([])
+    setFullItineraryHtml(null)
+    setMode('dayApproval')
+  }
+
+  const handleApproveDay = (html: string) => {
+    const newApproved = [...approvedDays, html]
+    setApprovedDays(newApproved)
+
+    if (newApproved.length >= totalDays) {
+      const header = `<div style="margin-bottom:32px">
+        <h1 style="font-family:Georgia,serif;color:#c9973c;font-size:28px;font-weight:700;margin-bottom:8px">Roteiro Completo</h1>
+        <p style="color:#8892a4;font-size:14px">${data.travelersCount} viajante(s) · ${totalDays} dias aprovados</p>
+      </div>`
+      setFullItineraryHtml(header + newApproved.join('\n'))
+      setMode('fullItinerary')
+    } else {
+      setCurrentDayIndex(i => i + 1)
+    }
   }
 
   const restart = () => {
@@ -94,9 +137,11 @@ export default function App() {
     localStorage.removeItem(LS_KEY)
     setStep(0)
     setData(initialData)
-    setItineraryHtml(null)
-    setError(null)
-    htmlRef.current = ''
+    setMode('wizard')
+    setApprovedDays([])
+    setCurrentDayIndex(0)
+    setTotalDays(0)
+    setFullItineraryHtml(null)
   }
 
   if (restoring) {
@@ -110,8 +155,20 @@ export default function App() {
     )
   }
 
-  if (itineraryHtml !== null) {
-    return <ItineraryView html={itineraryHtml} loading={loading} data={data} onRestart={restart} />
+  if (mode === 'dayApproval') {
+    return (
+      <DayApproval
+        data={data}
+        dayIndex={currentDayIndex}
+        totalDays={totalDays}
+        previousDays={approvedDays}
+        onApprove={handleApproveDay}
+      />
+    )
+  }
+
+  if (mode === 'fullItinerary' && fullItineraryHtml !== null) {
+    return <ItineraryView html={fullItineraryHtml} loading={false} data={data} onRestart={restart} />
   }
 
   return (
@@ -137,20 +194,24 @@ export default function App() {
       </div>
 
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', overflowX: 'auto', padding: '0 24px' }}>
-        {STEPS.map((label, i) => (
-          <button key={label} onClick={() => i < step && goToStep(i)}
-            style={{
-              padding: '12px 16px', fontSize: 12,
-              fontWeight: i === step ? 600 : 400,
-              color: i === step ? 'var(--gold)' : i < step ? 'var(--cream)' : 'var(--muted)',
-              background: 'none', border: 'none',
-              borderBottom: i === step ? '2px solid var(--gold)' : '2px solid transparent',
-              whiteSpace: 'nowrap', cursor: i < step ? 'pointer' : 'default',
-              transition: 'all 0.2s', fontFamily: 'var(--font-body)',
-            }}>
-            {i < step ? '✓ ' : ''}{label}
-          </button>
-        ))}
+        {STEPS.map((label, i) => {
+          const isCarroSkipped = label === 'Carro' && !usesCarRental(data)
+          if (isCarroSkipped) return null
+          return (
+            <button key={label} onClick={() => i < step && goToStep(i)}
+              style={{
+                padding: '12px 16px', fontSize: 12,
+                fontWeight: i === step ? 600 : 400,
+                color: i === step ? 'var(--gold)' : i < step ? 'var(--cream)' : 'var(--muted)',
+                background: 'none', border: 'none',
+                borderBottom: i === step ? '2px solid var(--gold)' : '2px solid transparent',
+                whiteSpace: 'nowrap', cursor: i < step ? 'pointer' : 'default',
+                transition: 'all 0.2s', fontFamily: 'var(--font-body)',
+              }}>
+              {i < step ? '✓ ' : ''}{label}
+            </button>
+          )
+        })}
       </div>
 
       {step > 0 && (
@@ -166,8 +227,9 @@ export default function App() {
         {step === 3 && <StepStyles data={data} update={update} onNext={next} onBack={back} />}
         {step === 4 && <StepTransport data={data} update={update} onNext={next} onBack={back} />}
         {step === 5 && <StepHotel data={data} update={update} onNext={next} onBack={back} />}
-        {step === 6 && (
-          <StepExtras data={data} update={update} onGenerate={handleGenerate} onBack={back} loading={loading} error={error} />
+        {step === 6 && <StepCarro data={data} update={update} onNext={next} onBack={back} />}
+        {step === 7 && (
+          <StepExtras data={data} update={update} onGenerate={handleGenerate} onBack={back} loading={false} error={null} />
         )}
       </main>
     </div>
