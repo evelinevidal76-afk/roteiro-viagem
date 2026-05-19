@@ -155,7 +155,10 @@ export async function generateDay(
   const destino = outLegs.length > 0 ? outLegs[outLegs.length - 1].destinationCode : '?'
   const cidadesTexto = cities.length > 0 ? cities.join(', ') : destino
 
-  const dateBase = outLegs.length > 0 ? new Date(outLegs[0].date) : new Date()
+  // Usa a data do último trecho de ida (data de chegada ao destino)
+  // Para voos com conexão, o primeiro trecho sai do Brasil e o último chega ao destino
+  const lastOutLeg = outLegs.length > 0 ? outLegs[outLegs.length - 1] : null
+  const dateBase = lastOutLeg ? new Date(lastOutLeg.date) : new Date()
   const dayDate = new Date(dateBase)
   dayDate.setDate(dayDate.getDate() + dayIndex)
   const dayLabel = dayDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })

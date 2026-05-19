@@ -67,7 +67,9 @@ function calculateTotalDays(data: WizardData): number {
 
   if (outLegs.length === 0) return 5
 
-  const outDate = new Date(outLegs[0].date)
+  // Usa último trecho de ida (data de chegada ao destino) como ponto de partida
+  const lastOutLeg = outLegs[outLegs.length - 1]
+  const outDate = new Date(lastOutLeg.date)
   if (retLegs.length > 0) {
     const retDate = new Date(retLegs[0].date)
     const diff = Math.round((retDate.getTime() - outDate.getTime()) / (1000 * 60 * 60 * 24))
