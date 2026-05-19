@@ -93,26 +93,36 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
     const stripFences = (raw: string) =>
       raw.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim()
 
+    // Durante o stream: substitui <img> por placeholders coloridos para evitar
+    // flickering causado por imagens sendo destruídas/recriadas a cada chunk
+    const stripImgsForStream = (html: string) =>
+      html.replace(/<img([^>]*)>/gi, (_m, attrs) => {
+        const hMatch = attrs.match(/height:\s*(\d+)/)
+        const h = hMatch ? hMatch[1] : '180'
+        return `<div style="width:100%;height:${h}px;background:rgba(201,151,60,0.06);border-radius:12px;margin-bottom:12px;border:1px solid rgba(201,151,60,0.12);"></div>`
+      })
+
     generateDay(
       data, dayIndex, totalDays, previousDays, attempt,
       (chunk) => {
         htmlRef.current += chunk
-        // Throttle via rAF: atualiza o DOM no máximo 1x por frame, sem piscar
+        // Throttle via rAF — sem imagens durante streaming para evitar flickering
         if (!rafPendingRef.current) {
           rafPendingRef.current = true
           requestAnimationFrame(() => {
             if (streamRef.current) {
-              streamRef.current.innerHTML = fixImageUrls(stripFences(htmlRef.current))
+              streamRef.current.innerHTML = stripImgsForStream(stripFences(htmlRef.current))
             }
             rafPendingRef.current = false
           })
         }
       },
       () => {
+        // Só ao finalizar: renderiza com imagens reais (uma única vez, sem flickering)
         const cleaned = fixImageUrls(stripFences(htmlRef.current))
         htmlRef.current = cleaned
         if (streamRef.current) streamRef.current.innerHTML = cleaned
-        setHtml(cleaned)  // dispara apenas uma vez, só para mostrar a barra de ações
+        setHtml(cleaned)
         setLoading(false)
         setActivities(extractActivities(cleaned))
       },
