@@ -3,6 +3,21 @@ import type { WizardData } from '../types'
 
 const CJ_AID = '7962462'
 
+let imgSeedCounter = 0
+function fixImageUrls(html: string): string {
+  return html.replace(/src="([^"]+)"/g, (match, url) => {
+    if (url.includes('{') || url.includes('}') || url.trim() === '') {
+      imgSeedCounter++
+      return `src="https://picsum.photos/seed/${imgSeedCounter}/800/220"`
+    }
+    if (/loremflickr\.com\/\d+\/\d+\/?$/.test(url)) {
+      imgSeedCounter++
+      return `src="https://picsum.photos/seed/${imgSeedCounter}/800/220"`
+    }
+    return match
+  })
+}
+
 // Garante código de afiliado em todos os links do Booking.com no HTML gerado
 function injectAffiliateLinks(container: HTMLElement) {
   container.querySelectorAll<HTMLAnchorElement>('a[href*="booking.com"]').forEach(a => {
@@ -93,7 +108,7 @@ export default function ItineraryView({ html, loading, data, onRestart }: Props)
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>Gerando seu roteiro personalizado...</p>
           </div>
         )}
-        <div ref={contentRef} dangerouslySetInnerHTML={{ __html: html.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim() }} />
+        <div ref={contentRef} dangerouslySetInnerHTML={{ __html: fixImageUrls(html.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim()) }} />
       </main>
 
       {/* Print styles */}

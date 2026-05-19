@@ -12,6 +12,25 @@ interface Props {
   onBack?: (step?: number) => void
 }
 
+let imgSeedCounter = 0
+
+// Corrige URLs de imagem inválidas (placeholders {}) substituindo por Picsum com seed
+function fixImageUrls(html: string): string {
+  return html.replace(/src="([^"]+)"/g, (match, url) => {
+    // URL com placeholder {..} ou vazia
+    if (url.includes('{') || url.includes('}') || url.trim() === '') {
+      imgSeedCounter++
+      return `src="https://picsum.photos/seed/${imgSeedCounter}/800/220"`
+    }
+    // URL loremflickr mal formada (sem keywords após a resolução)
+    if (/loremflickr\.com\/\d+\/\d+\/?$/.test(url)) {
+      imgSeedCounter++
+      return `src="https://picsum.photos/seed/${imgSeedCounter}/800/220"`
+    }
+    return match
+  })
+}
+
 // Extrai lista de atividades do HTML gerado (horário + título)
 function extractActivities(html: string): Array<{ time: string; title: string }> {
   const results: Array<{ time: string; title: string }> = []
@@ -59,10 +78,10 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
       data, dayIndex, totalDays, previousDays, attempt,
       (chunk) => {
         htmlRef.current += chunk
-        setHtml(stripFences(htmlRef.current))
+        setHtml(fixImageUrls(stripFences(htmlRef.current)))
       },
       () => {
-        const cleaned = stripFences(htmlRef.current)
+        const cleaned = fixImageUrls(stripFences(htmlRef.current))
         htmlRef.current = cleaned
         setHtml(cleaned)
         setLoading(false)

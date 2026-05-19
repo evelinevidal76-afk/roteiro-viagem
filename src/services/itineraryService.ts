@@ -223,7 +223,7 @@ ESTRUTURA HTML OBRIGATÓRIA — use exatamente este layout:
 
   <!-- COVER: imagem de capa full-width do destino/cidade do dia -->
   <div style="position:relative;overflow:hidden;">
-    <img src="https://loremflickr.com/800/280/{city},{destination},travel,landscape" style="width:100%;height:240px;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display='none'" alt="Dia ${dayIndex + 1}">
+    <img src="https://loremflickr.com/800/280/cancun,beach,travel" style="width:100%;height:240px;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display='none'" alt="Dia ${dayIndex + 1}">
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.05) 30%,rgba(0,0,0,0.72));display:flex;flex-direction:column;justify-content:flex-end;padding:28px;">
       <div style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">DIA ${dayIndex + 1} DE ${totalDays}</div>
       <div style="color:#ffffff;font-size:24px;font-weight:700;line-height:1.2;">{titulo do dia e data}</div>
@@ -237,7 +237,7 @@ ESTRUTURA HTML OBRIGATÓRIA — use exatamente este layout:
     <div style="padding:22px 0;border-bottom:1px solid #f3efe8;">
       <div style="color:#c9973c;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">09:00 — 10:30</div>
       <div style="color:#111827;font-size:16px;font-weight:600;margin-bottom:10px;">Nome da Atividade</div>
-      <img src="https://loremflickr.com/800/220/{activity-keywords-in-english}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px;" loading="lazy" onerror="this.style.display='none'" alt="atividade">
+      <img src="https://loremflickr.com/800/220/cenote,mexico,turquoise,water" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px;" loading="lazy" onerror="this.style.display='none'" alt="atividade">
       <p style="color:#4b5563;font-size:13px;line-height:1.75;margin:0 0 12px;">Descrição da atividade</p>
       <div style="background:#fffbf2;border-left:3px solid #c9973c;border-radius:0 8px 8px 0;padding:10px 14px;color:#92400e;font-size:12px;line-height:1.55;margin-bottom:10px;">💡 Dica prática</div>
       <span style="color:#c9973c;font-size:12px;font-weight:600;">💰 Custo estimado: valor</span>
@@ -251,10 +251,13 @@ ESTRUTURA HTML OBRIGATÓRIA — use exatamente este layout:
 
 </div>
 
-REGRAS:
-- Imagens: use loremflickr.com com palavras-chave em inglês específicas do local (ex: quinta+avenida,playa+del+carmen,beach para a Quinta Avenida)
-- Para restaurantes: use keywords como restaurant,{cuisine-type},{city}
-- Sugestão de ${regrasRefeicoesDia.includes('almoço') ? 'almoço' : 'almoço e jantar'} com nome real do restaurante, link Booking/Google Maps e imagem automática
+REGRAS DE IMAGENS (OBRIGATÓRIO):
+- Todas as URLs de imagem devem ser loremflickr.com com palavras-chave reais em inglês separadas por vírgula
+- NUNCA coloque variáveis ou chaves {{ }} dentro da URL. Use palavras reais do local.
+- Exemplos corretos: https://loremflickr.com/800/220/eiffel,tower,paris — https://loremflickr.com/800/220/colosseum,rome,italy — https://loremflickr.com/800/220/sushi,restaurant,japan
+- Para restaurantes: loremflickr.com/800/220/restaurant,italian,food ou loremflickr.com/800/220/seafood,restaurant,beach
+- Para hotéis: loremflickr.com/800/260/hotel,lobby,luxury ou loremflickr.com/800/260/resort,pool,tropical
+- Sugestão de ${regrasRefeicoesDia.includes('almoço') ? 'almoço' : 'almoço e jantar'} com nome real do restaurante, link Google Maps e imagem automática
 - Links Booking.com sempre com &aid=7962462
 
 Responda APENAS com o HTML, sem markdown, sem explicações.`
