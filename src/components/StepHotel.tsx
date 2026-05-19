@@ -245,7 +245,7 @@ export default function StepHotel({ data, update, onNext, onBack }: Props) {
               </div>
 
               {/* Regime alimentar */}
-              {choices[i]?.name.trim() && (
+              {(
                 <div style={{ marginTop: 14 }}>
                   <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
                     Regime de alimentação
