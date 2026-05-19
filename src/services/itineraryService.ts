@@ -21,6 +21,11 @@ export async function generateItineraryStream(
   const destino = outLegs.length > 0 ? outLegs[outLegs.length - 1].destinationCode : '?'
   const cidadesTexto = cities.length > 0 ? cities.join(', ') : destino
 
+  const hoteis = (data.selectedHotels || []).filter(h => h.confirmed && h.name.trim())
+  const hoteisTexto = hoteis.length > 0
+    ? hoteis.map(h => `  ${h.city}: ${h.name}`).join('\n')
+    : '  Não informado (use sugestões genéricas)'
+
   const prompt = `Você é um especialista em viagens de luxo e milhas aéreas. Crie um roteiro de viagem completo em HTML bonito e bem estruturado.
 
 DADOS DA VIAGEM:
@@ -32,6 +37,9 @@ DADOS DA VIAGEM:
 - Viajantes: ${data.travelersCount}
 - Observações: ${data.notes || 'nenhuma'}
 
+HOTÉIS ESCOLHIDOS (mencione-os nas atividades de check-in/check-out):
+${hoteisTexto}
+
 VOOS DE IDA:
 ${voosIda || '  Não informado'}
 
@@ -41,7 +49,7 @@ ${voosRetorno || '  Não informado'}
 Gere HTML completo com estas seções:
 - Cabeçalho com destino, resumo e custo estimado total
 - Um bloco por dia com título do dia, data e lista de atividades (horário, título, descrição, dica, custo estimado)
-- Seção de hotéis sugeridos com nome, categoria, localização, preço e destaques
+- Seção de hospedagem confirmada com os hotéis escolhidos (ou sugestões genéricas se não informado)
 
 Use estas classes CSS inline para estilo dark/dourado:
 - Fundo dos cards: background:#1a2235; border:1px solid #2d3a52; border-radius:12px; padding:20px; margin-bottom:16px
@@ -118,6 +126,11 @@ export async function generateDay(
     ? `\n\nDias ja aprovados: ${previousDays.length} dia(s). Nao repita atividades ou restaurantes dos dias anteriores.`
     : ''
 
+  const hoteisDia = (data.selectedHotels || []).filter(h => h.confirmed && h.name.trim())
+  const hoteisNota = hoteisDia.length > 0
+    ? `\n- Hoteis confirmados: ${hoteisDia.map(h => `${h.city}: ${h.name}`).join(', ')}`
+    : ''
+
   const prompt = `Voce e um especialista em viagens de luxo. Crie o roteiro do Dia ${dayIndex + 1} de ${totalDays} de uma viagem.
 
 DADOS DA VIAGEM:
@@ -128,7 +141,7 @@ DADOS DA VIAGEM:
 - Transporte local: ${data.transport}
 - Viajantes: ${data.travelersCount}
 - Data do dia: ${dayLabel}
-- Observacoes: ${data.notes || 'nenhuma'}${previousNote}${regenerateNote}
+- Observacoes: ${data.notes || 'nenhuma'}${hoteisNota}${previousNote}${regenerateNote}
 
 Gere HTML apenas para ESTE DIA com:
 - Titulo do dia (Dia ${dayIndex + 1} - ${dayLabel})

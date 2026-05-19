@@ -25,6 +25,7 @@ const initialData: WizardData = {
   travelProfile: null,
   travelStyles: [],
   transport: null,
+  selectedHotels: [],
   travelersCount: 2,
   notes: '',
 }

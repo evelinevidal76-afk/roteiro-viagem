@@ -41,6 +41,12 @@ export type TravelStyle =
 
 export type Transport = 'carro' | 'transporte_publico' | 'misto' | 'tour_guiado'
 
+export interface SelectedHotel {
+  city: string
+  name: string
+  confirmed: boolean
+}
+
 export interface WizardData {
   // Step 1 — Voo
   outboundFlight: FlightInfo | null
@@ -57,7 +63,10 @@ export interface WizardData {
   travelStyles: TravelStyle[]
   // Step 5 — Transporte
   transport: Transport | null
-  // Step 6 — Extras
+  // Step 6 — Hotel
+  selectedHotels: SelectedHotel[]
+  // Step 7 — Carro (any para campos extras gerados dinamicamente)
+  // Step 8 — Detalhes
   travelersCount: number
   notes: string
 }

@@ -1,14 +1,79 @@
-import React, { useState, useEffect } from 'react'
-import type { WizardData } from '../types'
+import React, { useState } from 'react'
+import type { WizardData, TravelProfile, SelectedHotel } from '../types'
 import { StepHeader, NavButtons } from './ui'
 
-interface Hotel {
-  name: string
-  category: string
-  location: string
-  priceRange: string
-  highlights: string[]
-  bookingUrl: string
+const CJ_AID = '7962462'
+
+interface ProfileConfig {
+  reviewMin: number
+  reviewLabel: string
+  starsFilter: string
+  starsLabel: string
+  order: string
+  orderLabel: string
+  icon: string
+}
+
+const PROFILE_CONFIG: Record<string, ProfileConfig> = {
+  economico: {
+    reviewMin: 80,
+    reviewLabel: 'Nota 8,0+',
+    starsFilter: '2%7C3',
+    starsLabel: '2 a 3 estrelas',
+    order: 'price',
+    orderLabel: 'Mais baratos primeiro',
+    icon: '💰',
+  },
+  intermediario: {
+    reviewMin: 85,
+    reviewLabel: 'Nota 8,5+',
+    starsFilter: '3%7C4',
+    starsLabel: '3 a 4 estrelas',
+    order: 'review_score_and_count',
+    orderLabel: 'Melhor avaliados',
+    icon: '⭐',
+  },
+  luxo: {
+    reviewMin: 90,
+    reviewLabel: 'Nota 9,0+ (Excepcional)',
+    starsFilter: '4%7C5',
+    starsLabel: '4 a 5 estrelas',
+    order: 'class_and_price',
+    orderLabel: 'Mais luxuosos',
+    icon: '✨',
+  },
+  misto: {
+    reviewMin: 85,
+    reviewLabel: 'Nota 8,5+',
+    starsFilter: '3%7C4%7C5',
+    starsLabel: '3 a 5 estrelas',
+    order: 'review_score_and_count',
+    orderLabel: 'Melhor avaliados',
+    icon: '🎯',
+  },
+}
+
+function buildBookingUrl(
+  destination: string,
+  checkIn: string,
+  checkOut: string,
+  profile: TravelProfile | null,
+  adults: number
+): string {
+  const dest = encodeURIComponent(destination)
+  const cfg = PROFILE_CONFIG[profile || 'intermediario']
+  const nflt = `review_score%3D${cfg.reviewMin}%7Cclass%3D${cfg.starsFilter}`
+  return (
+    `https://www.booking.com/searchresults.html` +
+    `?ss=${dest}` +
+    `&checkin=${checkIn}` +
+    `&checkout=${checkOut}` +
+    `&group_adults=${adults}` +
+    `&aid=${CJ_AID}` +
+    `&nflt=${nflt}` +
+    `&order=${cfg.order}` +
+    `&lang=pt-br`
+  )
 }
 
 interface Props {
@@ -18,212 +83,161 @@ interface Props {
   onBack: () => void
 }
 
-const CJ_AID = '7962462'
-
-function buildBookingUrl(destination: string, checkIn: string, checkOut: string) {
-  const dest = encodeURIComponent(destination)
-  return `https://www.booking.com/searchresults.html?ss=${dest}&checkin=${checkIn}&checkout=${checkOut}&aid=${CJ_AID}`
-}
-
 export default function StepHotel({ data, update, onNext, onBack }: Props) {
-  const [hotels, setHotels] = useState<Hotel[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selected, setSelected] = useState<number | null>(null)
-
+  const cities: string[] = (data as any).cities || []
   const outLegs = (data as any).outboundLegs || (data.outboundFlight ? [data.outboundFlight] : [])
   const retLegs = (data as any).returnLegs || (data.returnFlight ? [data.returnFlight] : [])
-  const cities = (data as any).cities || []
-  const destino = cities.length > 0 ? cities[0] : (outLegs.length > 0 ? outLegs[outLegs.length - 1].destinationCode : '?')
-  const checkIn = outLegs.length > 0 ? outLegs[0].date : ''
-  const checkOut = retLegs.length > 0 ? retLegs[0].date : ''
+  const checkIn: string = outLegs.length > 0 ? outLegs[0].date : ''
+  const checkOut: string = retLegs.length > 0 ? retLegs[0].date : ''
 
-  useEffect(() => {
-    const prompt = `Sugira exatamente 3 hoteis para ${destino} no periodo de ${checkIn} a ${checkOut} para ${data.travelersCount} viajante(s) com perfil "${data.travelProfile}".
+  const cfg = PROFILE_CONFIG[data.travelProfile || 'intermediario']
 
-Responda APENAS com JSON valido neste formato, sem markdown:
-[
-  {
-    "name": "Nome do hotel",
-    "category": "5 estrelas",
-    "location": "Localizacao especifica",
-    "priceRange": "US$ 150 - US$ 250/noite",
-    "highlights": ["vista para o mar", "cafe da manha incluso", "spa"]
+  const [choices, setChoices] = useState<SelectedHotel[]>(
+    () => cities.map(city => ({
+      city,
+      name: data.selectedHotels?.find(h => h.city === city)?.name || '',
+      confirmed: data.selectedHotels?.find(h => h.city === city)?.confirmed || false,
+    }))
+  )
+
+  const updateChoice = (i: number, patch: Partial<SelectedHotel>) => {
+    const next = choices.map((h, j) => j === i ? { ...h, ...patch } : h)
+    setChoices(next)
+    update({ selectedHotels: next })
   }
-]`
 
-    async function fetchHotels() {
-      try {
-        const res = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
-        })
-        if (!res.ok) throw new Error('Erro ao conectar')
-
-        const reader = res.body!.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
-        let fullText = ''
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() || ''
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            const raw = line.slice(6)
-            if (raw === '[DONE]') break
-            try {
-              const { text } = JSON.parse(raw)
-              if (text) fullText += text
-            } catch {}
-          }
-        }
-
-        const clean = fullText.replace(/```json|```/g, '').trim()
-        const start = clean.indexOf('[')
-        const end = clean.lastIndexOf(']')
-        const parsed: Omit<Hotel, 'bookingUrl'>[] = JSON.parse(clean.slice(start, end + 1))
-        setHotels(parsed.map(h => ({
-          ...h,
-          bookingUrl: buildBookingUrl(h.name + ' ' + destino, checkIn, checkOut),
-        })))
-        setLoading(false)
-      } catch {
-        setError('Erro ao buscar sugestoes de hoteis')
-        setLoading(false)
-      }
-    }
-    fetchHotels()
-  }, [])
-
-  const handleSelect = (i: number) => {
-    setSelected(i)
-    update({ selectedHotel: hotels[i] } as any)
-  }
+  const allConfirmed = choices.length > 0 && choices.every(h => h.confirmed)
 
   return (
     <div className="fade-up">
       <StepHeader
-        title="Escolha seu hotel 🏨"
-        subtitle={`Sugestoes para ${destino} baseadas no seu perfil`}
+        title="Escolha seus hotéis 🏨"
+        subtitle="Abrimos o Booking.com já filtrado com as melhores opções para o seu perfil."
       />
 
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '40px 0' }}>
-          <div style={{
-            width: 32, height: 32,
-            border: '2px solid var(--gold)', borderTopColor: 'transparent',
-            borderRadius: '50%', animation: 'spin 0.7s linear infinite',
-            margin: '0 auto 16px',
-          }} />
-          <p style={{ color: 'var(--muted)', fontSize: 13 }}>Buscando as melhores opcoes...</p>
+      {/* Badge de filtros ativos */}
+      <div style={{
+        background: 'rgba(201,151,60,0.08)',
+        border: '1px solid rgba(201,151,60,0.25)',
+        borderRadius: 10,
+        padding: '12px 16px',
+        marginBottom: 24,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+      }}>
+        <span style={{ fontSize: 20 }}>{cfg.icon}</span>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gold)', textTransform: 'capitalize' }}>
+            Perfil {data.travelProfile} — filtros ativos
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+            {cfg.reviewLabel} · {cfg.starsLabel} · {cfg.orderLabel}
+          </div>
         </div>
-      )}
+      </div>
 
-      {error && (
-        <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 20 }}>{error}</div>
-      )}
-
-      {!loading && !error && (
+      {cities.length === 0 ? (
+        <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 20 }}>
+          Nenhuma cidade selecionada. Volte ao passo Destino.
+        </div>
+      ) : (
         <div style={{ display: 'grid', gap: 16, marginBottom: 24 }}>
-          {hotels.map((hotel, i) => (
-            <div
-              key={i}
-              onClick={() => handleSelect(i)}
-              style={{
-                background: 'var(--navy-soft)',
-                border: `1px solid ${selected === i ? 'var(--gold)' : 'var(--border)'}`,
-                borderRadius: 12,
-                padding: '18px 20px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                position: 'relative',
-              }}
-            >
-              {selected === i && (
-                <div style={{
-                  position: 'absolute', top: 12, right: 12,
-                  background: 'var(--gold)', color: '#0d1521',
-                  borderRadius: '50%', width: 22, height: 22,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 12, fontWeight: 700,
-                }}>✓</div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+          {cities.map((city, i) => (
+            <div key={i} style={{
+              background: 'var(--navy-soft)',
+              border: `1px solid ${choices[i]?.confirmed ? 'var(--gold)' : 'var(--border)'}`,
+              borderRadius: 12,
+              padding: '18px 20px',
+              transition: 'border-color 0.2s',
+            }}>
+              {/* Cabecalho da cidade */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--cream)' }}>{hotel.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-                    {hotel.category} · 📍 {hotel.location}
+                  <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--cream)' }}>
+                    📍 {city}
                   </div>
+                  {checkIn && checkOut && (
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+                      {checkIn} → {checkOut} · {data.travelersCount} pessoa(s)
+                    </div>
+                  )}
                 </div>
-                <div style={{
-                  background: 'rgba(201,151,60,0.12)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 8, padding: '4px 10px',
-                  fontSize: 12, color: 'var(--gold)',
-                  fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
-                }}>
-                  {hotel.priceRange}
-                </div>
+                {choices[i]?.confirmed && (
+                  <div style={{
+                    background: 'var(--gold)', color: '#0d1521',
+                    borderRadius: '50%', width: 26, height: 26,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 13, fontWeight: 700, flexShrink: 0,
+                  }}>✓</div>
+                )}
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                {hotel.highlights.map((h, j) => (
-                  <span key={j} style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 20, padding: '3px 10px',
-                    fontSize: 11, color: 'var(--muted)',
-                  }}>{h}</span>
-                ))}
-              </div>
-
+              {/* Botao de busca com filtros */}
               <a
-                href={hotel.bookingUrl}
+                href={buildBookingUrl(city, checkIn, checkOut, data.travelProfile, data.travelersCount)}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={e => e.stopPropagation()}
                 style={{
-                  display: 'inline-block',
-                  background: '#003580',
-                  color: 'white',
-                  borderRadius: 8,
-                  padding: '8px 16px',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  fontFamily: 'var(--font-body)',
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: '#003580', color: 'white',
+                  borderRadius: 8, padding: '9px 16px',
+                  fontSize: 12, fontWeight: 600, textDecoration: 'none',
+                  fontFamily: 'var(--font-body)', marginBottom: 14,
                 }}
               >
-                🏨 Ver no Booking.com →
+                🏨 Ver hotéis em {city} com nota {cfg.reviewLabel} →
               </a>
+
+              {/* Campo para registrar o hotel escolhido */}
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>
+                  Hotel escolhido (registre aqui para incluir no roteiro)
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={choices[i]?.name || ''}
+                    onChange={e => updateChoice(i, { name: e.target.value, confirmed: false })}
+                    placeholder={`Ex: Ibis ${city}, Grand Hyatt ${city}...`}
+                    style={{
+                      flex: 1, padding: '9px 12px',
+                      background: '#111827',
+                      border: `1px solid ${choices[i]?.confirmed ? 'var(--gold)' : 'var(--border)'}`,
+                      borderRadius: 8, color: 'var(--cream)', fontSize: 13,
+                      fontFamily: 'var(--font-body)', transition: 'border-color 0.2s',
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (!choices[i]?.confirmed && !choices[i]?.name.trim()) return
+                      updateChoice(i, { confirmed: !choices[i]?.confirmed })
+                    }}
+                    style={{
+                      padding: '9px 14px',
+                      background: choices[i]?.confirmed ? 'var(--gold)' : 'transparent',
+                      border: `1px solid ${choices[i]?.confirmed ? 'var(--gold)' : 'var(--border)'}`,
+                      borderRadius: 8,
+                      color: choices[i]?.confirmed ? '#0d1521' : 'var(--muted)',
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
+                      opacity: (!choices[i]?.name.trim() && !choices[i]?.confirmed) ? 0.4 : 1,
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {choices[i]?.confirmed ? '✓ Confirmado' : 'Confirmar'}
+                  </button>
+                </div>
+              </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {!loading && (
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <a
-            href={buildBookingUrl(destino, checkIn, checkOut)}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'underline' }}
-          >
-            Ver todos os hoteis disponiveis em {destino} →
-          </a>
         </div>
       )}
 
       <NavButtons
         onBack={onBack}
         onNext={onNext}
-        nextLabel={selected !== null ? 'Continuar com este hotel →' : 'Pular esta etapa →'}
+        nextLabel={allConfirmed ? 'Continuar →' : 'Pular esta etapa →'}
       />
     </div>
   )
