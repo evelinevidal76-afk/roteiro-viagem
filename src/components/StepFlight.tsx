@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import type { WizardData, FlightInfo } from '../types'
 import { Button, StepHeader, Card } from './ui'
 import { fetchFlight } from '../services/flightService'
-import { getAirportCity, getAirlineName } from '../services/lookupService'
+import { getAirportCity, getAirlineName, getAirportOffset } from '../services/lookupService'
 
 interface Props {
   data: WizardData
@@ -63,17 +63,25 @@ function ManualForm({ num, manualData, updateManual, onSave, onCancel, error }: 
   num: string; manualData: FlightInfo; updateManual: (f: string, v: any) => void
   onSave: () => void; onCancel: () => void; error: string | null
 }) {
-  // Calcula chegada a partir de partida + duração (aceita 6:47 ou 6h47)
+  // Calcula chegada a partir de partida + duração considerando fuso horário
   const calcArrival = (dep: string, dur: string) => {
     const [dh, dm] = dep.split(':').map(Number)
     if (isNaN(dh) || isNaN(dm)) return
     const match = dur.match(/(\d+)[h:](\d+)?/)
     if (!match) return
     const dHours = parseInt(match[1]) || 0
-    const dMins = parseInt(match[2]) || 0
-    const total = dh * 60 + dm + dHours * 60 + dMins
-    const ah = Math.floor(total / 60) % 24
-    const am = total % 60
+    const dMins = parseInt(match[2] || '0') || 0
+    let total = dh * 60 + dm + dHours * 60 + dMins
+    // Ajuste de fuso: (offset destino - offset origem) em minutos
+    const originOff = getAirportOffset(manualData.originCode)
+    const destOff = getAirportOffset(manualData.destinationCode)
+    if (originOff !== null && destOff !== null && originOff !== destOff) {
+      total += (destOff - originOff) * 60
+    }
+    const dayMins = 24 * 60
+    const adjusted = ((total % dayMins) + dayMins) % dayMins
+    const ah = Math.floor(adjusted / 60)
+    const am = adjusted % 60
     updateManual('arrival', `${ah.toString().padStart(2, '0')}:${am.toString().padStart(2, '0')}`)
   }
 
