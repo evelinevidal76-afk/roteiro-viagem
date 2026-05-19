@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import type { WizardData } from './types'
+import type { WizardData, SelectedHotel } from './types'
 import StepFlight from './components/StepFlight'
 import StepCities, { StepProfile, StepStyles, StepTransport } from './components/Steps'
 import StepHotel from './components/StepHotel'
@@ -11,8 +11,33 @@ import { salvarEstado, recuperarSessao, getSessaoId, clearSessaoId } from './ser
 
 const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Hotel', 'Carro', 'Detalhes']
 const LS_KEY = 'decifrando_roteiros_step'
+const PROGRESS_KEY = 'decifrando_roteiros_progress'
 
 type AppMode = 'wizard' | 'dayApproval' | 'fullItinerary'
+
+interface AppProgress {
+  mode: AppMode
+  approvedDays: string[]
+  currentDayIndex: number
+  totalDays: number
+  fullItineraryHtml: string | null
+  selectedHotels: SelectedHotel[]
+}
+
+function saveProgress(p: AppProgress) {
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(p))
+  } catch {}
+}
+
+function loadProgress(): AppProgress | null {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
 
 const initialData: WizardData = {
   outboundFlight: null,
@@ -62,24 +87,55 @@ export default function App() {
 
   useEffect(() => {
     const sessaoId = getSessaoId()
-    if (sessaoId) {
-      recuperarSessao(sessaoId).then((saved: Partial<WizardData> | null) => {
+
+    const restoreAll = async () => {
+      // 1. Restaura WizardData do Supabase
+      if (sessaoId) {
+        const saved = await recuperarSessao(sessaoId).catch(() => null)
         if (saved) {
           setData(prev => ({ ...prev, ...saved }))
           const savedStep = parseInt(localStorage.getItem(LS_KEY) || '0')
           setStep(savedStep)
         }
-        setRestoring(false)
-      })
-    } else {
+      }
+
+      // 2. Restaura progresso do roteiro (aprovação dia a dia) do localStorage
+      const progress = loadProgress()
+      if (progress) {
+        if (progress.selectedHotels?.length) {
+          setData(prev => ({ ...prev, selectedHotels: progress.selectedHotels }))
+        }
+        if (progress.mode !== 'wizard') {
+          setMode(progress.mode)
+          setApprovedDays(progress.approvedDays || [])
+          setCurrentDayIndex(progress.currentDayIndex || 0)
+          setTotalDays(progress.totalDays || 0)
+          setFullItineraryHtml(progress.fullItineraryHtml || null)
+        }
+      }
+
       setRestoring(false)
     }
+
+    restoreAll()
   }, [])
 
   const update = async (patch: Partial<WizardData>) => {
     const next = { ...data, ...patch }
     setData(next)
     setSaving(true)
+
+    // Persiste hotéis no localStorage junto com o progresso atual
+    const progress = loadProgress()
+    saveProgress({
+      mode: progress?.mode || 'wizard',
+      approvedDays: progress?.approvedDays || [],
+      currentDayIndex: progress?.currentDayIndex || 0,
+      totalDays: progress?.totalDays || 0,
+      fullItineraryHtml: progress?.fullItineraryHtml || null,
+      selectedHotels: next.selectedHotels || [],
+    })
+
     try { await salvarEstado(next) } catch {}
     setSaving(false)
   }
@@ -89,7 +145,6 @@ export default function App() {
     localStorage.setItem(LS_KEY, String(s))
   }
 
-  // step 6 = Carro, skip if transport nao usa carro
   const next = () => {
     const nextStep = step + 1
     if (nextStep === 6 && !usesCarRental(data)) {
@@ -115,6 +170,14 @@ export default function App() {
     setApprovedDays([])
     setFullItineraryHtml(null)
     setMode('dayApproval')
+    saveProgress({
+      mode: 'dayApproval',
+      approvedDays: [],
+      currentDayIndex: 0,
+      totalDays: days,
+      fullItineraryHtml: null,
+      selectedHotels: data.selectedHotels || [],
+    })
   }
 
   const handleApproveDay = (html: string) => {
@@ -126,16 +189,35 @@ export default function App() {
         <h1 style="font-family:Georgia,serif;color:#c9973c;font-size:28px;font-weight:700;margin-bottom:8px">Roteiro Completo</h1>
         <p style="color:#8892a4;font-size:14px">${data.travelersCount} viajante(s) · ${totalDays} dias aprovados</p>
       </div>`
-      setFullItineraryHtml(header + newApproved.join('\n'))
+      const fullHtml = header + newApproved.join('\n')
+      setFullItineraryHtml(fullHtml)
       setMode('fullItinerary')
+      saveProgress({
+        mode: 'fullItinerary',
+        approvedDays: newApproved,
+        currentDayIndex: totalDays,
+        totalDays,
+        fullItineraryHtml: fullHtml,
+        selectedHotels: data.selectedHotels || [],
+      })
     } else {
-      setCurrentDayIndex(i => i + 1)
+      const nextDay = currentDayIndex + 1
+      setCurrentDayIndex(nextDay)
+      saveProgress({
+        mode: 'dayApproval',
+        approvedDays: newApproved,
+        currentDayIndex: nextDay,
+        totalDays,
+        fullItineraryHtml: null,
+        selectedHotels: data.selectedHotels || [],
+      })
     }
   }
 
   const restart = () => {
     clearSessaoId()
     localStorage.removeItem(LS_KEY)
+    localStorage.removeItem(PROGRESS_KEY)
     setStep(0)
     setData(initialData)
     setMode('wizard')
@@ -196,8 +278,7 @@ export default function App() {
 
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', overflowX: 'auto', padding: '0 24px' }}>
         {STEPS.map((label, i) => {
-          const isCarroSkipped = label === 'Carro' && !usesCarRental(data)
-          if (isCarroSkipped) return null
+          if (label === 'Carro' && !usesCarRental(data)) return null
           return (
             <button key={label} onClick={() => i < step && goToStep(i)}
               style={{
@@ -217,7 +298,7 @@ export default function App() {
 
       {step > 0 && (
         <div style={{ padding: '6px 24px', background: 'rgba(201,151,60,0.06)', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ color: 'var(--gold)' }}>●</span> Progresso salvo automaticamente no banco de dados
+          <span style={{ color: 'var(--gold)' }}>●</span> Progresso salvo automaticamente
         </div>
       )}
 
