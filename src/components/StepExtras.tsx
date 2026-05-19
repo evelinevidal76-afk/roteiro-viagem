@@ -141,25 +141,6 @@ export default function StepExtras({ data, update, onGenerate, onBack, loading, 
               </div>
             </div>
           </div>
-          {/* Gasto diário */}
-          <div style={{ background: 'var(--navy-soft)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gold)', marginBottom: 10 }}>🎒 Gasto diário estimado (por pessoa)</div>
-            <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
-              Atividades, alimentação, transporte local, extras. (Deixe 0 se não souber — pode ajustar depois.)
-            </p>
-            <input
-              type="number"
-              min={0}
-              value={data.dailyBudgetBRL || ''}
-              onChange={e => update({ dailyBudgetBRL: Number(e.target.value) })}
-              placeholder="Ex: 500"
-              style={{
-                width: '100%', padding: '8px 10px', fontSize: 13,
-                background: '#111827', border: '1px solid var(--border)',
-                borderRadius: 8, color: 'var(--cream)', fontFamily: 'var(--font-body)',
-              }}
-            />
-          </div>
         </div>
       </div>
 

@@ -324,12 +324,12 @@ export default function StepHotel({ data, update, onNext, onBack }: Props) {
                       style={{
                         padding: '5px 12px', fontSize: 11, borderRadius: 20, cursor: 'pointer',
                         fontFamily: 'var(--font-body)', transition: 'all 0.15s',
-                        background: choices[i]?.hotelPaid ? 'rgba(52,211,153,0.15)' : 'transparent',
-                        border: `1px solid ${choices[i]?.hotelPaid ? '#34d399' : 'var(--border)'}`,
-                        color: choices[i]?.hotelPaid ? '#34d399' : 'var(--muted)',
+                        background: choices[i]?.hotelPaid ? 'rgba(52,211,153,0.15)' : 'rgba(201,151,60,0.08)',
+                        border: `1px solid ${choices[i]?.hotelPaid ? '#34d399' : 'rgba(201,151,60,0.4)'}`,
+                        color: choices[i]?.hotelPaid ? '#34d399' : 'var(--gold)',
                       }}
                     >
-                      {choices[i]?.hotelPaid ? '✓ Já pago' : 'A pagar lá'}
+                      {choices[i]?.hotelPaid ? '✓ Já pago' : '💳 A pagar lá'}
                     </button>
                   </div>
                 </div>
