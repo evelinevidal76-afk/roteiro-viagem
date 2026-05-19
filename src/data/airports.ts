@@ -88,7 +88,7 @@ export const AIRLINES: Record<string, string> = {
   WS: 'WestJet', AM: 'Aeroméxico', CM: 'Copa Airlines',
   AV: 'Avianca', LA2: 'LAN Colombia', AR: 'Aerolíneas Argentinas',
   PZ: 'LATAM Paraguay', H2: 'Sky Airline', JA: 'JetSmart',
-  4M: 'LATAM Argentina', P9: 'Peruvian Airlines',
+  '4M': 'LATAM Argentina', P9: 'Peruvian Airlines',
   FR: 'Ryanair', U2: 'easyJet', VY: 'Vueling', W6: 'Wizz Air',
   BT: 'Air Baltic', AY: 'Finnair', SK: 'SAS', LO: 'LOT Polish',
   OK: 'Czech Airlines', FB: 'Bulgaria Air', RO: 'TAROM',
