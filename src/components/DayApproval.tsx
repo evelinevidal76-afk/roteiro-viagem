@@ -14,18 +14,26 @@ interface Props {
 
 let imgSeedCounter = 0
 
-// Corrige URLs de imagem inválidas (placeholders {}) substituindo por Picsum com seed
+// Corrige e normaliza URLs de imagem:
+// 1. Converte loremflickr → source.unsplash.com (fotos de viagem muito melhores)
+// 2. Substitui placeholders {} por picsum com seed único
 function fixImageUrls(html: string): string {
   return html.replace(/src="([^"]+)"/g, (match, url) => {
-    // URL com placeholder {..} ou vazia
+    // URL com placeholder {..} ou vazia — usa picsum com seed
     if (url.includes('{') || url.includes('}') || url.trim() === '') {
       imgSeedCounter++
-      return `src="https://picsum.photos/seed/${imgSeedCounter}/800/220"`
+      return `src="https://picsum.photos/seed/travel${imgSeedCounter * 17}/800/220"`
     }
-    // URL loremflickr mal formada (sem keywords após a resolução)
+    // Converte loremflickr → unsplash: loremflickr.com/800/220/eiffel,paris → source.unsplash.com/800x220/?eiffel,paris
+    const flickrMatch = url.match(/loremflickr\.com\/(\d+)\/(\d+)\/(.+)/)
+    if (flickrMatch) {
+      const keywords = flickrMatch[3].split(',').slice(0, 3).join(',')
+      return `src="https://source.unsplash.com/${flickrMatch[1]}x${flickrMatch[2]}/?${keywords}"`
+    }
+    // loremflickr sem keywords — picsum
     if (/loremflickr\.com\/\d+\/\d+\/?$/.test(url)) {
       imgSeedCounter++
-      return `src="https://picsum.photos/seed/${imgSeedCounter}/800/220"`
+      return `src="https://picsum.photos/seed/travel${imgSeedCounter * 17}/800/220"`
     }
     return match
   })
