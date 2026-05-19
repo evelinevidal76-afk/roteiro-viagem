@@ -71,6 +71,7 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
   const [activities, setActivities] = useState<Array<{ time: string; title: string }>>([])
   const htmlRef = useRef('')
   const streamRef = useRef<HTMLDivElement>(null)
+  const rafPendingRef = useRef(false)
 
   useEffect(() => {
     htmlRef.current = ''
@@ -88,9 +89,15 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
       data, dayIndex, totalDays, previousDays, attempt,
       (chunk) => {
         htmlRef.current += chunk
-        // Atualiza o DOM diretamente — sem re-render do React, sem piscar
-        if (streamRef.current) {
-          streamRef.current.innerHTML = fixImageUrls(stripFences(htmlRef.current))
+        // Throttle via rAF: atualiza o DOM no máximo 1x por frame, sem piscar
+        if (!rafPendingRef.current) {
+          rafPendingRef.current = true
+          requestAnimationFrame(() => {
+            if (streamRef.current) {
+              streamRef.current.innerHTML = fixImageUrls(stripFences(htmlRef.current))
+            }
+            rafPendingRef.current = false
+          })
         }
       },
       () => {
