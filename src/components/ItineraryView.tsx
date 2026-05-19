@@ -1,5 +1,20 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import type { WizardData } from '../types'
+
+const CJ_AID = '7962462'
+
+// Garante código de afiliado em todos os links do Booking.com no HTML gerado
+function injectAffiliateLinks(container: HTMLElement) {
+  container.querySelectorAll<HTMLAnchorElement>('a[href*="booking.com"]').forEach(a => {
+    try {
+      const url = new URL(a.href)
+      if (!url.searchParams.has('aid')) {
+        url.searchParams.set('aid', CJ_AID)
+        a.href = url.toString()
+      }
+    } catch {}
+  })
+}
 
 interface Props {
   html: string
@@ -9,7 +24,14 @@ interface Props {
 }
 
 export default function ItineraryView({ html, loading, data, onRestart }: Props) {
+  const contentRef = useRef<HTMLDivElement>(null)
   const handlePrint = () => window.print()
+
+  useEffect(() => {
+    if (contentRef.current && !loading) {
+      injectAffiliateLinks(contentRef.current)
+    }
+  }, [html, loading])
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -71,7 +93,7 @@ export default function ItineraryView({ html, loading, data, onRestart }: Props)
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>Gerando seu roteiro personalizado...</p>
           </div>
         )}
-        <div dangerouslySetInnerHTML={{ __html: html }} />
+        <div ref={contentRef} dangerouslySetInnerHTML={{ __html: html }} />
       </main>
 
       {/* Print styles */}

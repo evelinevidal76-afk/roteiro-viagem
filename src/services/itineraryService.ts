@@ -61,6 +61,8 @@ Use estas classes CSS inline para estilo dark/dourado:
 - Hotéis: background:#1a2235; border:1px solid #2d3a52; border-radius:12px; padding:20px; margin-bottom:12px
 - Tags de destaque: background:rgba(255,255,255,0.05); border:1px solid #2d3a52; border-radius:20px; padding:4px 10px; font-size:11px; color:#8892a4; display:inline-block; margin:3px
 
+IMPORTANTE: qualquer link do Booking.com deve conter obrigatoriamente o parâmetro &aid=7962462 na URL.
+
 Responda APENAS com o HTML, sem markdown, sem explicações.`
 
   try {
@@ -155,6 +157,8 @@ Use estilos inline dark/dourado:
 - Titulos atividade: color:#f0e6d3; font-weight:600; font-size:15px
 - Descricoes: color:#8892a4; font-size:13px; line-height:1.6
 - Dicas: background:rgba(201,151,60,0.08); border:1px solid #2d3a52; border-radius:8px; padding:8px 12px; color:#c9973c; font-size:12px; margin-top:8px
+
+IMPORTANTE: qualquer link do Booking.com deve conter obrigatoriamente o parâmetro &aid=7962462 na URL.
 
 Responda APENAS com o HTML, sem markdown, sem explicacoes.`
 
