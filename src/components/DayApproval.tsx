@@ -118,10 +118,10 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
         }
       },
       () => {
-        // Só ao finalizar: renderiza com imagens reais (uma única vez, sem flickering)
+        // Ao finalizar: React renderiza o HTML completo com imagens via dangerouslySetInnerHTML
+        // setHtml + setLoading são batched — troca atômica sem flash
         const cleaned = fixImageUrls(stripFences(htmlRef.current))
         htmlRef.current = cleaned
-        if (streamRef.current) streamRef.current.innerHTML = cleaned
         setHtml(cleaned)
         setLoading(false)
         setActivities(extractActivities(cleaned))
@@ -250,8 +250,10 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
         )}
 
         {error && <ErrorBox message={error} />}
-        {/* Conteúdo atualizado via DOM ref durante streaming — sem re-render, sem piscar */}
-        <div ref={streamRef} />
+        {/* Durante streaming: DOM imperativo via ref (sem re-render, sem piscar) */}
+        {loading && <div ref={streamRef} />}
+        {/* Após concluir: React renderiza o HTML final com imagens via dangerouslySetInnerHTML */}
+        {!loading && html && <div dangerouslySetInnerHTML={{ __html: html }} />}
 
         {/* Seletor de atividades para trocar */}
         {showSelector && activities.length > 0 && (
