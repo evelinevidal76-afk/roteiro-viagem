@@ -8,7 +8,11 @@ import StepExtras from './components/StepExtras'
 import StepCityPlan from './components/StepCityPlan'
 import ItineraryView from './components/ItineraryView'
 import DayApproval from './components/DayApproval'
-import { salvarEstado, recuperarSessao, getSessaoId, clearSessaoId } from './services/dbService'
+import {
+  salvarEstado, recuperarSessao, getSessaoId, clearSessaoId,
+  getSessaoCodigo, getSessaoEmail, setSessaoEmail,
+  salvarEmail, recuperarSessaoPorCodigo,
+} from './services/dbService'
 
 const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Hotel', 'Carro', 'Detalhes', 'Destinos']
 const LS_KEY = 'decifrando_roteiros_step'
@@ -98,6 +102,16 @@ export default function App() {
   const [fullItineraryHtml, setFullItineraryHtml] = useState<string | null>(null)
   const [restoring, setRestoring] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [accessCode, setAccessCode] = useState<string | null>(getSessaoCodigo)
+  const [userEmail, setUserEmail] = useState<string>(getSessaoEmail() || '')
+  const [showRecovery, setShowRecovery] = useState(() => !getSessaoId())
+  const [recoveryEmail, setRecoveryEmail] = useState('')
+  const [recoveryCode, setRecoveryCode] = useState('')
+  const [recoveryError, setRecoveryError] = useState('')
+  const [recoveryLoading, setRecoveryLoading] = useState(false)
+  const [emailSaving, setEmailSaving] = useState(false)
+  const [emailSaved, setEmailSaved] = useState(!!getSessaoEmail())
+  const [codeCopied, setCodeCopied] = useState(false)
 
   useEffect(() => {
     const sessaoId = getSessaoId()
@@ -162,6 +176,11 @@ export default function App() {
     })
 
     try { await salvarEstado(next) } catch {}
+    // Detecta quando a sessão (e o código) é criada pela primeira vez
+    if (!accessCode) {
+      const code = getSessaoCodigo()
+      if (code) setAccessCode(code)
+    }
     setSaving(false)
   }
 
@@ -264,6 +283,50 @@ export default function App() {
     setCurrentDayIndex(0)
     setTotalDays(0)
     setFullItineraryHtml(null)
+    setAccessCode(null)
+    setUserEmail('')
+    setEmailSaved(false)
+    setShowRecovery(true)
+  }
+
+  const handleRecovery = async () => {
+    if (!recoveryEmail.trim() || !recoveryCode.trim()) {
+      setRecoveryError('Preencha e-mail e código.')
+      return
+    }
+    setRecoveryLoading(true)
+    setRecoveryError('')
+    const saved = await recuperarSessaoPorCodigo(recoveryEmail, recoveryCode)
+    if (saved) {
+      setData(prev => ({ ...prev, ...saved }))
+      const savedStep = parseInt(localStorage.getItem(LS_KEY) || '0')
+      setStep(savedStep)
+      setAccessCode(recoveryCode.trim().toUpperCase())
+      setUserEmail(recoveryEmail.trim().toLowerCase())
+      setEmailSaved(true)
+      setShowRecovery(false)
+    } else {
+      setRecoveryError('E-mail ou código não encontrado. Verifique e tente novamente.')
+    }
+    setRecoveryLoading(false)
+  }
+
+  const handleSaveEmail = async () => {
+    const sessaoId = getSessaoId()
+    if (!sessaoId || !userEmail.trim() || emailSaved) return
+    setEmailSaving(true)
+    await salvarEmail(sessaoId, userEmail)
+    setEmailSaved(true)
+    setSessaoEmail(userEmail.trim().toLowerCase())
+    setEmailSaving(false)
+  }
+
+  const handleCopyCode = () => {
+    if (accessCode) {
+      navigator.clipboard.writeText(accessCode)
+      setCodeCopied(true)
+      setTimeout(() => setCodeCopied(false), 2000)
+    }
   }
 
   if (restoring) {
@@ -273,6 +336,52 @@ export default function App() {
           <div style={{ width: 32, height: 32, border: '2px solid var(--gold)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 16px' }} />
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>Recuperando seu progresso...</p>
         </div>
+      </div>
+    )
+  }
+
+  // Tela de recuperação — aparece quando não há sessão no localStorage
+  if (showRecovery) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ marginBottom: 32, textAlign: 'center' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--gold)', fontWeight: 700 }}>Decifrando Roteiros</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>Decifrando Milhas</div>
+        </div>
+
+        <div style={{ width: '100%', maxWidth: 400, background: 'var(--navy-soft)', border: '1px solid var(--border)', borderRadius: 16, padding: '28px 24px', marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--cream)', marginBottom: 4 }}>Recuperar roteiro salvo</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20 }}>Informe o e-mail e o código recebido ao criar seu roteiro.</div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>E-mail</label>
+              <input
+                type="email" value={recoveryEmail} onChange={e => setRecoveryEmail(e.target.value)}
+                placeholder="seu@email.com" onKeyDown={e => e.key === 'Enter' && handleRecovery()}
+                style={{ width: '100%', padding: '10px 12px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 13, boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Código (ex: ABC123)</label>
+              <input
+                type="text" value={recoveryCode} onChange={e => setRecoveryCode(e.target.value.toUpperCase())}
+                placeholder="ABC123" maxLength={6} onKeyDown={e => e.key === 'Enter' && handleRecovery()}
+                style={{ width: '100%', padding: '10px 12px', background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--cream)', fontSize: 16, letterSpacing: '0.2em', fontWeight: 700, boxSizing: 'border-box' }}
+              />
+            </div>
+            {recoveryError && <div style={{ fontSize: 12, color: '#f87171' }}>{recoveryError}</div>}
+            <button onClick={handleRecovery} disabled={recoveryLoading}
+              style={{ padding: '11px', background: 'var(--gold)', border: 'none', borderRadius: 8, color: '#0d1521', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+              {recoveryLoading ? 'Buscando...' : 'Recuperar meu roteiro'}
+            </button>
+          </div>
+        </div>
+
+        <button onClick={() => setShowRecovery(false)}
+          style={{ fontSize: 13, color: 'var(--gold)', background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 24px', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+          Criar novo roteiro →
+        </button>
       </div>
     )
   }
@@ -301,8 +410,36 @@ export default function App() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--gold)', fontWeight: 700 }}>Decifrando Roteiros</div>
           <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>Decifrando Milhas</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {saving && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Salvando...</span>}
+
+          {/* Código de acesso */}
+          {accessCode && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(201,151,60,0.1)', border: '1px solid rgba(201,151,60,0.3)', borderRadius: 8, padding: '5px 10px' }}>
+              <span style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: '0.05em' }}>CÓDIGO</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.15em' }}>{accessCode}</span>
+              <button onClick={handleCopyCode} title="Copiar código"
+                style={{ fontSize: 11, color: codeCopied ? '#34d399' : 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px' }}>
+                {codeCopied ? '✓' : '⎘'}
+              </button>
+            </div>
+          )}
+
+          {/* Salvar e-mail (aparece quando há código mas e-mail ainda não foi salvo) */}
+          {accessCode && !emailSaved && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)}
+                placeholder="seu@email.com" onKeyDown={e => e.key === 'Enter' && handleSaveEmail()}
+                style={{ padding: '5px 8px', fontSize: 11, background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--cream)', width: 160 }} />
+              <button onClick={handleSaveEmail} disabled={emailSaving || !userEmail.trim()}
+                style={{ fontSize: 11, padding: '5px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--gold)', cursor: 'pointer', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>
+                {emailSaving ? '...' : 'Salvar e-mail'}
+              </button>
+            </div>
+          )}
+          {accessCode && emailSaved && (
+            <span style={{ fontSize: 11, color: '#34d399' }}>✓ {userEmail}</span>
+          )}
 
           {/* Botão de retorno ao roteiro em andamento */}
           {totalDays > 0 && (

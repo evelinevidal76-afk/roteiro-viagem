@@ -3,6 +3,23 @@ import type { WizardData, GeneratedItinerary, FlightInfo } from '../types'
 const URL = import.meta.env.VITE_SUPABASE_URL
 const KEY = import.meta.env.VITE_SUPABASE_KEY
 const SESSION_KEY = 'decifrando_roteiros_sessao_id'
+const CODE_KEY = 'decifrando_roteiros_codigo'
+const EMAIL_KEY = 'decifrando_roteiros_email'
+
+// Gera código de 6 caracteres legíveis (sem 0, O, I, L para evitar confusão)
+function gerarCodigo(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+  let code = ''
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+export function getSessaoCodigo(): string | null { return localStorage.getItem(CODE_KEY) }
+export function setSessaoCodigo(c: string) { localStorage.setItem(CODE_KEY, c) }
+export function clearSessaoCodigo() { localStorage.removeItem(CODE_KEY) }
+export function getSessaoEmail(): string | null { return localStorage.getItem(EMAIL_KEY) }
+export function setSessaoEmail(e: string) { localStorage.setItem(EMAIL_KEY, e) }
+export function clearSessaoEmail() { localStorage.removeItem(EMAIL_KEY) }
 
 const headers = {
   'Content-Type': 'application/json',
@@ -32,9 +49,13 @@ async function get(table: string, query: string) {
 
 // ─── Sessão ───────────────────────────────────────────────
 export async function criarSessao(): Promise<string> {
-  const row = await post('sessoes', { status: 'em_andamento' })
+  const codigo = gerarCodigo()
+  const row = await post('sessoes', { status: 'em_andamento', codigo })
   const id = row?.id
-  if (id) localStorage.setItem(SESSION_KEY, id)
+  if (id) {
+    localStorage.setItem(SESSION_KEY, id)
+    setSessaoCodigo(codigo)
+  }
   return id
 }
 
@@ -44,6 +65,35 @@ export function getSessaoId(): string | null {
 
 export function clearSessaoId() {
   localStorage.removeItem(SESSION_KEY)
+  clearSessaoCodigo()
+  clearSessaoEmail()
+}
+
+// ─── Email vinculado ao código ────────────────────────────
+export async function salvarEmail(sessaoId: string, email: string): Promise<void> {
+  await patch('sessoes', sessaoId, { email: email.trim().toLowerCase() })
+  setSessaoEmail(email.trim().toLowerCase())
+}
+
+// ─── Recuperação por e-mail + código ─────────────────────
+export async function recuperarSessaoPorCodigo(
+  email: string,
+  codigo: string
+): Promise<Partial<WizardData> | null> {
+  try {
+    const rows = await get(
+      'sessoes',
+      `email=eq.${encodeURIComponent(email.trim().toLowerCase())}&codigo=eq.${codigo.trim().toUpperCase()}&select=id`
+    )
+    const sessao = rows?.[0]
+    if (!sessao?.id) return null
+    localStorage.setItem(SESSION_KEY, sessao.id)
+    setSessaoCodigo(codigo.trim().toUpperCase())
+    setSessaoEmail(email.trim().toLowerCase())
+    return await recuperarSessao(sessao.id)
+  } catch {
+    return null
+  }
 }
 
 // ─── Salvar voos ──────────────────────────────────────────
