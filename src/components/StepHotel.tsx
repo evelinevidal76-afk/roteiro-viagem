@@ -100,8 +100,10 @@ export default function StepHotel({ data, update, onNext, onBack }: Props) {
 
   const cfg = PROFILE_CONFIG[data.travelProfile || 'intermediario']
 
+  const cityNights: number[] = data.cityNights || []
+
   const [choices, setChoices] = useState<SelectedHotel[]>(
-    () => cities.map(city => {
+    () => cities.map((city, idx) => {
       const saved = data.selectedHotels?.find(h => h.city === city)
       return {
         city,
@@ -111,7 +113,7 @@ export default function StepHotel({ data, update, onNext, onBack }: Props) {
         imageUrl: saved?.imageUrl || '',
         roomImageUrl: saved?.roomImageUrl || '',
         pricePerNightBRL: saved?.pricePerNightBRL || 0,
-        nights: saved?.nights || 1,
+        nights: saved?.nights || cityNights[idx] || 3,
         hotelPaid: saved?.hotelPaid || false,
       }
     })

@@ -7,11 +7,14 @@ export default function StepCities({
   data, update, onNext, onBack
 }: { data: WizardData; update: (p: Partial<WizardData>) => void; onNext: () => void; onBack: () => void }) {
   const cities: string[] = (data as any).cities || []
+  const cityNights: number[] = data.cityNights || []
 
   const setCount = (n: number) => {
     const current = cities.slice(0, n)
+    const nights = cityNights.slice(0, n)
     while (current.length < n) current.push('')
-    update({ citiesCount: n, cities: current } as any)
+    while (nights.length < n) nights.push(3)
+    update({ citiesCount: n, cities: current, cityNights: nights } as any)
   }
 
   const setCity = (i: number, v: string) => {
@@ -20,13 +23,21 @@ export default function StepCities({
     update({ cities: updated } as any)
   }
 
+  const setNights = (i: number, delta: number) => {
+    const updated = [...cityNights]
+    while (updated.length <= i) updated.push(3)
+    updated[i] = Math.max(1, (updated[i] || 3) + delta)
+    update({ cityNights: updated } as any)
+  }
+
+  const totalNights = cityNights.reduce((s, n) => s + (n || 3), 0)
   const canContinue = cities.length > 0 && cities.every(c => c.trim().length > 0)
 
   return (
     <div className="fade-up">
       <StepHeader
         title="Destino(s) 🗺️"
-        subtitle="Quantas cidades base e quais são elas?"
+        subtitle="Quantas cidades e quantas noites em cada uma?"
       />
 
       {/* Seleção de quantidade */}
@@ -44,27 +55,50 @@ export default function StepCities({
         ))}
       </div>
 
-      {/* Campos de cidade */}
+      {/* Campos de cidade + noites */}
       {cities.length > 0 && (
-        <div style={{ display: 'grid', gap: 10, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
           {cities.map((city, i) => (
-            <div key={i}>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>
+            <div key={i} style={{
+              background: 'var(--navy-soft)', border: '1px solid var(--border)',
+              borderRadius: 12, padding: '14px 16px',
+            }}>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
                 {cities.length === 1 ? 'Cidade' : `Cidade ${i + 1}`}
               </label>
-              <input
-                type="text"
-                value={city}
-                onChange={e => setCity(i, e.target.value)}
-                placeholder={i === 0 ? 'Ex: Cancún' : i === 1 ? 'Ex: Playa del Carmen' : 'Ex: Tulum'}
-                style={{
-                  width: '100%', padding: '11px 14px',
-                  background: 'var(--navy-soft)', border: `1px solid ${city.trim() ? 'var(--gold)' : 'var(--border)'}`,
-                  borderRadius: 'var(--radius)', color: 'var(--cream)', fontSize: 14,
-                }}
-              />
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={e => setCity(i, e.target.value)}
+                  placeholder={i === 0 ? 'Ex: Cancún' : i === 1 ? 'Ex: Playa del Carmen' : 'Ex: Tulum'}
+                  style={{
+                    flex: 1, padding: '10px 12px',
+                    background: '#111827', border: `1px solid ${city.trim() ? 'var(--gold)' : 'var(--border)'}`,
+                    borderRadius: 8, color: 'var(--cream)', fontSize: 14,
+                    fontFamily: 'var(--font-body)',
+                  }}
+                />
+                {/* Contador de noites */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <button onClick={() => setNights(i, -1)}
+                    style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--cream)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                  <div style={{ textAlign: 'center', minWidth: 42 }}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--gold)', lineHeight: 1 }}>{cityNights[i] || 3}</div>
+                    <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 1 }}>noites</div>
+                  </div>
+                  <button onClick={() => setNights(i, 1)}
+                    style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--cream)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                </div>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {cities.length > 1 && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'right', marginBottom: 24 }}>
+          Total: <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{totalNights} noites</span>
         </div>
       )}
 

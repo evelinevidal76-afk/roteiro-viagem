@@ -48,6 +48,7 @@ const initialData: WizardData = {
   hasReturn: false,
   citiesCount: 1,
   cities: [],
+  cityNights: [],
   travelProfile: null,
   travelStyles: [],
   transport: null,

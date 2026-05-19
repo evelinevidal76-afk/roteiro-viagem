@@ -76,6 +76,7 @@ export interface WizardData {
   // Step 2 — Destino
   citiesCount: number
   cities: string[]
+  cityNights: number[]
   // Step 3 — Perfil
   travelProfile: TravelProfile | null
   // Step 4 — Estilo

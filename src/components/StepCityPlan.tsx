@@ -142,12 +142,13 @@ export default function StepCityPlan({ data, update, onGenerate, onBack, totalDa
 
   const [plans, setPlans] = useState<CityPlan[]>(() => {
     if (data.cityPlans && data.cityPlans.length === cities.length) return data.cityPlans
-    // Default: distribute days evenly
+    // Use cityNights from StepCities if available, else distribute evenly
+    const cityNights = data.cityNights || []
     const base = Math.floor(totalDays / cities.length)
     const remainder = totalDays % cities.length
     return cities.map((city, i) => ({
       city,
-      days: base + (i === 0 ? remainder : 0),
+      days: cityNights[i] || (base + (i === 0 ? remainder : 0)),
       selectedAttractions: [],
     }))
   })
