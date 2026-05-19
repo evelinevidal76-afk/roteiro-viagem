@@ -110,6 +110,9 @@ export default function StepHotel({ data, update, onNext, onBack }: Props) {
         mealPlan: saved?.mealPlan || null,
         imageUrl: saved?.imageUrl || '',
         roomImageUrl: saved?.roomImageUrl || '',
+        pricePerNightBRL: saved?.pricePerNightBRL || 0,
+        nights: saved?.nights || 1,
+        hotelPaid: saved?.hotelPaid || false,
       }
     })
   )
@@ -273,6 +276,62 @@ export default function StepHotel({ data, update, onNext, onBack }: Props) {
                   </div>
                 </div>
               )}
+
+              {/* Orçamento do hotel */}
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+                <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Orçamento do hotel
+                </label>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                  {/* Diária */}
+                  <div style={{ flex: '1 1 120px' }}>
+                    <label style={{ display: 'block', fontSize: 10, color: 'var(--muted)', marginBottom: 4 }}>Diária (R$)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={choices[i]?.pricePerNightBRL || ''}
+                      onChange={e => updateChoice(i, { pricePerNightBRL: Number(e.target.value) })}
+                      placeholder="0"
+                      style={{
+                        width: '100%', padding: '8px 10px', fontSize: 13,
+                        background: '#111827', border: '1px solid var(--border)',
+                        borderRadius: 8, color: 'var(--cream)', fontFamily: 'var(--font-body)',
+                      }}
+                    />
+                  </div>
+                  {/* Noites */}
+                  <div style={{ flex: '0 0 auto' }}>
+                    <label style={{ display: 'block', fontSize: 10, color: 'var(--muted)', marginBottom: 4 }}>Noites</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button onClick={() => updateChoice(i, { nights: Math.max(1, (choices[i]?.nights || 1) - 1) })}
+                        style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--cream)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--cream)', minWidth: 20, textAlign: 'center' }}>{choices[i]?.nights || 1}</span>
+                      <button onClick={() => updateChoice(i, { nights: (choices[i]?.nights || 1) + 1 })}
+                        style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--cream)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                    </div>
+                  </div>
+                  {/* Total + pago */}
+                  <div style={{ flex: '1 1 auto', textAlign: 'right' }}>
+                    {(choices[i]?.pricePerNightBRL || 0) > 0 && (
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)', marginBottom: 4 }}>
+                        R$ {((choices[i]?.pricePerNightBRL || 0) * (choices[i]?.nights || 1)).toLocaleString('pt-BR')}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => updateChoice(i, { hotelPaid: !choices[i]?.hotelPaid })}
+                      style={{
+                        padding: '5px 12px', fontSize: 11, borderRadius: 20, cursor: 'pointer',
+                        fontFamily: 'var(--font-body)', transition: 'all 0.15s',
+                        background: choices[i]?.hotelPaid ? 'rgba(52,211,153,0.15)' : 'transparent',
+                        border: `1px solid ${choices[i]?.hotelPaid ? '#34d399' : 'var(--border)'}`,
+                        color: choices[i]?.hotelPaid ? '#34d399' : 'var(--muted)',
+                      }}
+                    >
+                      {choices[i]?.hotelPaid ? '✓ Já pago' : 'A pagar lá'}
+                    </button>
+                  </div>
+                </div>
+              </div>
 
             </div>
           ))}

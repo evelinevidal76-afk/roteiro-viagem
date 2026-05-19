@@ -97,12 +97,78 @@ export default function StepExtras({ data, update, onGenerate, onBack, loading, 
         />
       </div>
 
+      {/* Orçamento de viagem */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--cream)', marginBottom: 4 }}>
+          Orçamento de viagem (opcional)
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14 }}>
+          Preencha para ver o resumo financeiro completo antes de gerar o roteiro.
+        </p>
+        <div style={{ display: 'grid', gap: 14 }}>
+          {/* Passagens */}
+          <div style={{ background: 'var(--navy-soft)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gold)', marginBottom: 10 }}>✈️ Passagens aéreas</div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 150px' }}>
+                <label style={{ display: 'block', fontSize: 10, color: 'var(--muted)', marginBottom: 4 }}>Valor total (R$)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={data.flightCostBRL || ''}
+                  onChange={e => update({ flightCostBRL: Number(e.target.value) })}
+                  placeholder="Ex: 4800"
+                  style={{
+                    width: '100%', padding: '8px 10px', fontSize: 13,
+                    background: '#111827', border: '1px solid var(--border)',
+                    borderRadius: 8, color: 'var(--cream)', fontFamily: 'var(--font-body)',
+                  }}
+                />
+              </div>
+              <div style={{ paddingTop: 18 }}>
+                <button
+                  onClick={() => update({ flightPaid: !data.flightPaid })}
+                  style={{
+                    padding: '8px 14px', fontSize: 12, borderRadius: 20, cursor: 'pointer',
+                    fontFamily: 'var(--font-body)', transition: 'all 0.15s', whiteSpace: 'nowrap',
+                    background: data.flightPaid ? 'rgba(52,211,153,0.15)' : 'transparent',
+                    border: `1px solid ${data.flightPaid ? '#34d399' : 'var(--border)'}`,
+                    color: data.flightPaid ? '#34d399' : 'var(--muted)',
+                  }}
+                >
+                  {data.flightPaid ? '✓ Já pago' : 'A pagar'}
+                </button>
+              </div>
+            </div>
+          </div>
+          {/* Gasto diário */}
+          <div style={{ background: 'var(--navy-soft)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gold)', marginBottom: 10 }}>🎒 Gasto diário estimado (por pessoa)</div>
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
+              Atividades, alimentação, transporte local, extras. (Deixe 0 se não souber — pode ajustar depois.)
+            </p>
+            <input
+              type="number"
+              min={0}
+              value={data.dailyBudgetBRL || ''}
+              onChange={e => update({ dailyBudgetBRL: Number(e.target.value) })}
+              placeholder="Ex: 500"
+              style={{
+                width: '100%', padding: '8px 10px', fontSize: 13,
+                background: '#111827', border: '1px solid var(--border)',
+                borderRadius: 8, color: 'var(--cream)', fontFamily: 'var(--font-body)',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       {error && <ErrorBox message={error} />}
 
       <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between' }}>
         <Button variant="secondary" onClick={onBack}>← Voltar</Button>
         <Button onClick={onGenerate} loading={loading}>
-          {loading ? 'Gerando roteiro...' : '✨ Gerar meu roteiro'}
+          {loading ? 'Aguarde...' : 'Próximo →'}
         </Button>
       </div>
     </div>

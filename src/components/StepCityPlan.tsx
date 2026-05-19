@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import type { WizardData, CityPlan } from '../types'
 import { StepHeader, Button } from './ui'
 import { CITY_ATTRACTIONS, GENERIC_ATTRACTIONS } from '../data/attractions'
+import { getCurrencyByAirport, formatLocalAmount } from '../data/currencies'
 
 interface Props {
   data: WizardData
@@ -9,6 +10,109 @@ interface Props {
   onGenerate: () => void
   onBack: () => void
   totalDays: number
+}
+
+function BudgetSummary({ data, totalDays }: { data: WizardData; totalDays: number }) {
+  const hotels = (data.selectedHotels || []).filter(h => h.confirmed && h.name.trim())
+  const hotelTotal = hotels.reduce((s, h) => s + (h.pricePerNightBRL || 0) * (h.nights || 1), 0)
+  const hotelPaid = hotels.filter(h => h.hotelPaid).reduce((s, h) => s + (h.pricePerNightBRL || 0) * (h.nights || 1), 0)
+  const hotelUnpaid = hotelTotal - hotelPaid
+
+  const flightTotal = data.flightCostBRL || 0
+  const flightPaid = data.flightPaid ? flightTotal : 0
+  const flightUnpaid = data.flightPaid ? 0 : flightTotal
+
+  const dailyTotal = (data.dailyBudgetBRL || 0) * totalDays * (data.travelersCount || 1)
+
+  const grandTotal = flightTotal + hotelTotal + dailyTotal
+  const totalPaid = flightPaid + hotelPaid
+  const totalUnpaid = flightUnpaid + hotelUnpaid + dailyTotal
+
+  const outLegs = (data as any).outboundLegs || (data.outboundFlight ? [data.outboundFlight] : [])
+  const destCode = outLegs.length > 0 ? outLegs[outLegs.length - 1].destinationCode : ''
+  const currency = getCurrencyByAirport(destCode)
+
+  const hasBudget = grandTotal > 0
+
+  if (!hasBudget) return null
+
+  const row = (label: string, brl: number, sub?: string, color?: string) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div>
+        <span style={{ fontSize: 13, color: 'var(--cream)' }}>{label}</span>
+        {sub && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{sub}</span>}
+      </div>
+      <span style={{ fontSize: 13, fontWeight: 600, color: color || 'var(--cream)' }}>
+        R$ {brl.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+      </span>
+    </div>
+  )
+
+  return (
+    <div style={{ background: 'var(--navy-soft)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px', marginBottom: 24 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)', marginBottom: 14 }}>
+        💰 Resumo financeiro da viagem
+      </div>
+
+      {flightTotal > 0 && row('✈️ Passagens', flightTotal, data.flightPaid ? '(já pago)' : '(a pagar)')}
+      {hotelTotal > 0 && row('🏨 Hospedagem total', hotelTotal, hotels.length > 0 ? `${hotels.length} hotel(is)` : undefined)}
+      {dailyTotal > 0 && row(
+        '🎒 Gastos diários',
+        dailyTotal,
+        `R$${(data.dailyBudgetBRL || 0).toLocaleString('pt-BR')} × ${totalDays} dias × ${data.travelersCount} pessoa(s)`
+      )}
+
+      {/* Totais */}
+      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '2px solid var(--border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--cream)' }}>Total estimado</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--gold)' }}>
+            R$ {grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+          </span>
+        </div>
+        {totalPaid > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ fontSize: 12, color: '#34d399' }}>✓ Já pago</span>
+            <span style={{ fontSize: 12, color: '#34d399', fontWeight: 600 }}>
+              R$ {totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+            </span>
+          </div>
+        )}
+        {totalUnpaid > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ fontSize: 12, color: '#f59e0b' }}>⚠ Ainda a pagar / levar</span>
+            <span style={{ fontSize: 12, color: '#f59e0b', fontWeight: 600 }}>
+              R$ {totalUnpaid.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Conversão para moeda local */}
+      {totalUnpaid > 0 && currency.code !== 'BRL' && (
+        <div style={{
+          marginTop: 14, padding: '12px 14px',
+          background: 'rgba(201,151,60,0.07)', border: '1px solid rgba(201,151,60,0.2)',
+          borderRadius: 10,
+        }}>
+          <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginBottom: 4 }}>
+            💱 Leve na {currency.name}
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--cream)' }}>
+            {formatLocalAmount(totalUnpaid, currency)}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
+            Cotação aprox.: 1 {currency.code} = R$ {currency.brlPerUnit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} · Confirme antes de viajar.
+          </div>
+          {hotels.filter(h => !h.hotelPaid && h.pricePerNightBRL > 0).length > 0 && (
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+              Inclui hospedagem a pagar localmente + gastos diários estimados.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function getAttractionsForCity(city: string, styles: string[]): string[] {
@@ -239,6 +343,9 @@ export default function StepCityPlan({ data, update, onGenerate, onBack, totalDa
           </div>
         )
       })}
+
+      {/* Resumo de orçamento */}
+      <BudgetSummary data={data} totalDays={totalDays} />
 
       {!canGenerate && (
         <p style={{ fontSize: 12, color: '#f59e0b', marginBottom: 16, textAlign: 'center' }}>

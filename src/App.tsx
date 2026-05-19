@@ -55,6 +55,9 @@ const initialData: WizardData = {
   travelersCount: 2,
   notes: '',
   cityPlans: [],
+  flightCostBRL: 0,
+  flightPaid: false,
+  dailyBudgetBRL: 0,
 }
 
 function calculateTotalDays(data: WizardData): number {

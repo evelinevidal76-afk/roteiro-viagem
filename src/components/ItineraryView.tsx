@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import type { WizardData } from '../types'
+import { getCurrencyByAirport, formatLocalAmount } from '../data/currencies'
 
 const CJ_AID = '7962462'
 
@@ -36,6 +37,86 @@ interface Props {
   loading: boolean
   data: WizardData
   onRestart: () => void
+}
+
+function calcTotalDays(data: WizardData): number {
+  const outLegs = (data as any).outboundLegs || (data.outboundFlight ? [data.outboundFlight] : [])
+  const retLegs = (data as any).returnLegs || (data.returnFlight ? [data.returnFlight] : [])
+  if (outLegs.length === 0) return 5
+  const outDate = new Date(outLegs[0].date)
+  if (retLegs.length > 0) {
+    const diff = Math.round((new Date(retLegs[0].date).getTime() - outDate.getTime()) / 86400000)
+    return Math.max(1, Math.min(diff, 21))
+  }
+  return 5
+}
+
+function BudgetCard({ data }: { data: WizardData }) {
+  const totalDays = calcTotalDays(data)
+  const hotels = (data.selectedHotels || []).filter(h => h.confirmed && h.name.trim())
+  const hotelTotal = hotels.reduce((s, h) => s + (h.pricePerNightBRL || 0) * (h.nights || 1), 0)
+  const hotelPaid = hotels.filter(h => h.hotelPaid).reduce((s, h) => s + (h.pricePerNightBRL || 0) * (h.nights || 1), 0)
+  const flightTotal = data.flightCostBRL || 0
+  const dailyTotal = (data.dailyBudgetBRL || 0) * totalDays * (data.travelersCount || 1)
+  const grandTotal = flightTotal + hotelTotal + dailyTotal
+  const totalPaid = (data.flightPaid ? flightTotal : 0) + hotelPaid
+  const totalUnpaid = grandTotal - totalPaid
+
+  const outLegs = (data as any).outboundLegs || (data.outboundFlight ? [data.outboundFlight] : [])
+  const destCode = outLegs.length > 0 ? outLegs[outLegs.length - 1].destinationCode : ''
+  const currency = getCurrencyByAirport(destCode)
+
+  if (grandTotal === 0) return null
+
+  return (
+    <div style={{
+      background: '#1a2235', border: '1px solid #2d3a52', borderRadius: 14,
+      padding: '20px 24px', marginBottom: 28,
+    }} className="no-print">
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#c9973c', marginBottom: 14 }}>
+        💰 Resumo financeiro da viagem
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
+        {flightTotal > 0 && (
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ fontSize: 10, color: '#8892a4', marginBottom: 4 }}>✈️ Passagens</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#f0e6d3' }}>R$ {flightTotal.toLocaleString('pt-BR')}</div>
+            <div style={{ fontSize: 11, color: data.flightPaid ? '#34d399' : '#f59e0b', marginTop: 3 }}>{data.flightPaid ? '✓ Já pago' : '⚠ A pagar'}</div>
+          </div>
+        )}
+        {hotelTotal > 0 && (
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ fontSize: 10, color: '#8892a4', marginBottom: 4 }}>🏨 Hospedagem</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#f0e6d3' }}>R$ {hotelTotal.toLocaleString('pt-BR')}</div>
+            <div style={{ fontSize: 11, color: hotelPaid === hotelTotal ? '#34d399' : '#f59e0b', marginTop: 3 }}>
+              {hotelPaid === hotelTotal ? '✓ Já pago' : hotelPaid > 0 ? `✓ R$ ${hotelPaid.toLocaleString('pt-BR')} pago` : '⚠ A pagar lá'}
+            </div>
+          </div>
+        )}
+        {dailyTotal > 0 && (
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ fontSize: 10, color: '#8892a4', marginBottom: 4 }}>🎒 Gastos diários</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#f0e6d3' }}>R$ {dailyTotal.toLocaleString('pt-BR')}</div>
+            <div style={{ fontSize: 11, color: '#8892a4', marginTop: 3 }}>{totalDays} dias · {data.travelersCount} pessoa(s)</div>
+          </div>
+        )}
+        <div style={{ background: 'rgba(201,151,60,0.08)', border: '1px solid rgba(201,151,60,0.25)', borderRadius: 10, padding: '12px 14px' }}>
+          <div style={{ fontSize: 10, color: '#c9973c', marginBottom: 4 }}>TOTAL</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#c9973c' }}>R$ {grandTotal.toLocaleString('pt-BR')}</div>
+          {totalPaid > 0 && <div style={{ fontSize: 11, color: '#34d399', marginTop: 3 }}>✓ R$ {totalPaid.toLocaleString('pt-BR')} pago</div>}
+        </div>
+      </div>
+      {totalUnpaid > 0 && currency.code !== 'BRL' && (
+        <div style={{ background: 'rgba(201,151,60,0.06)', border: '1px solid rgba(201,151,60,0.18)', borderRadius: 10, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#c9973c', fontWeight: 600, marginBottom: 2 }}>💱 Levar na {currency.name}</div>
+            <div style={{ fontSize: 10, color: '#8892a4' }}>Cotação aprox. · confirme antes de viajar</div>
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#f0e6d3' }}>{formatLocalAmount(totalUnpaid, currency)}</div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function ItineraryView({ html, loading, data, onRestart }: Props) {
@@ -108,6 +189,7 @@ export default function ItineraryView({ html, loading, data, onRestart }: Props)
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>Gerando seu roteiro personalizado...</p>
           </div>
         )}
+        {!loading && <BudgetCard data={data} />}
         <div ref={contentRef} dangerouslySetInnerHTML={{ __html: fixImageUrls(html.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim()) }} />
       </main>
 

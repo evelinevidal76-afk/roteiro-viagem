@@ -55,6 +55,9 @@ export interface SelectedHotel {
   mealPlan: MealPlan | null
   imageUrl: string
   roomImageUrl: string
+  pricePerNightBRL: number
+  nights: number
+  hotelPaid: boolean
 }
 
 export interface CityPlan {
@@ -87,6 +90,10 @@ export interface WizardData {
   notes: string
   // Step 9 — Plano por cidade
   cityPlans: CityPlan[]
+  // Orçamento
+  flightCostBRL: number
+  flightPaid: boolean
+  dailyBudgetBRL: number
 }
 
 export interface ItineraryDay {
