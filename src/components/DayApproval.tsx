@@ -14,26 +14,34 @@ interface Props {
 
 let imgSeedCounter = 0
 
-// Corrige e normaliza URLs de imagem:
-// 1. Converte loremflickr → source.unsplash.com (fotos de viagem muito melhores)
-// 2. Substitui placeholders {} por picsum com seed único
+// Converte URLs de imagem para picsum.photos com seed derivado das keywords
+// source.unsplash.com foi descontinuado em 2023; loremflickr retorna fotos aleatórias
+// picsum.photos é 100% confiável e varia pelo seed
+function keywordSeed(keywords: string): string {
+  let hash = 0
+  for (let i = 0; i < keywords.length; i++) {
+    hash = ((hash << 5) - hash + keywords.charCodeAt(i)) | 0
+  }
+  return Math.abs(hash).toString()
+}
+
 function fixImageUrls(html: string): string {
   return html.replace(/src="([^"]+)"/g, (match, url) => {
-    // URL com placeholder {..} ou vazia — usa picsum com seed
+    // URL com placeholder {..} ou vazia
     if (url.includes('{') || url.includes('}') || url.trim() === '') {
       imgSeedCounter++
-      return `src="https://picsum.photos/seed/travel${imgSeedCounter * 17}/800/220"`
+      return `src="https://picsum.photos/seed/t${imgSeedCounter * 17}/800/220"`
     }
-    // Converte loremflickr → unsplash: loremflickr.com/800/220/eiffel,paris → source.unsplash.com/800x220/?eiffel,paris
+    // loremflickr com keywords → picsum com seed derivado das keywords
     const flickrMatch = url.match(/loremflickr\.com\/(\d+)\/(\d+)\/(.+)/)
     if (flickrMatch) {
-      const keywords = flickrMatch[3].split(',').slice(0, 3).join(',')
-      return `src="https://source.unsplash.com/${flickrMatch[1]}x${flickrMatch[2]}/?${keywords}"`
+      const w = flickrMatch[1], h = flickrMatch[2], kw = flickrMatch[3]
+      return `src="https://picsum.photos/seed/${keywordSeed(kw)}/${w}/${h}"`
     }
-    // loremflickr sem keywords — picsum
-    if (/loremflickr\.com\/\d+\/\d+\/?$/.test(url)) {
+    // loremflickr sem keywords ou source.unsplash.com → picsum fallback
+    if (/loremflickr\.com/.test(url) || /source\.unsplash\.com/.test(url)) {
       imgSeedCounter++
-      return `src="https://picsum.photos/seed/travel${imgSeedCounter * 17}/800/220"`
+      return `src="https://picsum.photos/seed/t${imgSeedCounter * 17}/800/220"`
     }
     return match
   })
