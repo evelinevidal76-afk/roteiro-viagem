@@ -272,11 +272,10 @@ ESTRUTURA HTML OBRIGATÓRIA — use exatamente este layout:
   <!-- ATIVIDADES -->
   <div style="padding:8px 28px 20px;">
 
-    <!-- Repita este bloco para cada atividade (5 a 7 no total) -->
+    <!-- Repita este bloco para cada atividade (5 a 7 no total) — SEM imagem nas atividades -->
     <div style="padding:22px 0;border-bottom:1px solid #f3efe8;">
       <div style="color:#c9973c;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">09:00 — 10:30</div>
       <div style="color:#111827;font-size:16px;font-weight:600;margin-bottom:10px;">Nome da Atividade</div>
-      <img src="https://loremflickr.com/800/220/cenote,mexico,turquoise,water" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px;" loading="lazy" onerror="this.style.display='none'" alt="atividade">
       <p style="color:#4b5563;font-size:13px;line-height:1.75;margin:0 0 12px;">Descrição da atividade</p>
       <div style="background:#fffbf2;border-left:3px solid #c9973c;border-radius:0 8px 8px 0;padding:10px 14px;color:#92400e;font-size:12px;line-height:1.55;margin-bottom:10px;">💡 Dica prática</div>
       <span style="color:#c9973c;font-size:12px;font-weight:600;">💰 Custo estimado: valor</span>
@@ -290,15 +289,12 @@ ESTRUTURA HTML OBRIGATÓRIA — use exatamente este layout:
 
 </div>
 
-REGRAS DE IMAGENS (OBRIGATÓRIO):
-- Todas as URLs de imagem devem usar loremflickr.com com palavras-chave reais em inglês: https://loremflickr.com/LARGURA/ALTURA/palavra1,palavra2,palavra3
-- NUNCA coloque variáveis ou chaves {{ }} dentro da URL. Use palavras reais do local.
-- Exemplos corretos: https://loremflickr.com/800/220/eiffel,tower,paris — https://loremflickr.com/800/220/colosseum,rome,italy — https://loremflickr.com/800/220/sushi,restaurant,japan
-- Para praias: loremflickr.com/800/220/beach,turquoise,caribbean — Para cenotes: loremflickr.com/800/220/cenote,cave,water,mexico
-- Para ruínas: loremflickr.com/800/220/mayan,ruins,mexico — Para restaurantes: loremflickr.com/800/220/mexican,food,restaurant
-- Para hotéis: loremflickr.com/800/260/hotel,resort,tropical — Para aventura: loremflickr.com/800/220/zipline,adventure,jungle
-- Use sempre 2 a 3 palavras-chave específicas ao local
-- Sugestão de ${regrasRefeicoesDia.includes('almoço') ? 'almoço' : 'almoço e jantar'} com nome real do restaurante, link Google Maps e imagem automática
+REGRAS DE IMAGENS:
+- APENAS a foto de capa do dia (cover) deve ter <img>. Use loremflickr.com com palavras-chave do destino: https://loremflickr.com/800/280/playa,del,carmen,beach
+- NÃO coloque <img> dentro dos blocos de atividade — só texto, descrição, dica e custo
+- Para hotéis: pode incluir 1 imagem se desejar: loremflickr.com/800/260/hotel,resort,tropical
+- NUNCA use variáveis ou chaves {{ }} dentro de URLs
+- Sugestão de ${regrasRefeicoesDia.includes('almoço') ? 'almoço' : 'almoço e jantar'} com nome real do restaurante e link Google Maps
 - Links Booking.com sempre com &aid=7962462
 
 Responda APENAS com o HTML, sem markdown, sem explicações.`
