@@ -1,7 +1,44 @@
+// Mapa de estilos de viagem para palavras-chave de atrações
+// Usado para ordenar atrações por relevância ao perfil do viajante
+export const STYLE_KEYWORDS: Record<string, string[]> = {
+  gastronomico: ['gastron', 'restaur', 'mercado', 'culinár', 'food', 'degust', 'alux', 'aldea', 'chef'],
+  cultural: ['museu', 'museum', 'histór', 'cultura', 'ruins', 'ruínas', 'arqueol', 'itzá', 'cobá', 'tulum', 'chichen', 'teotihu', 'frida', 'arte', 'centro histórico'],
+  aventura: ['xplor', 'xel-há', 'tirolesa', 'zipline', 'rafting', 'atv', 'selva', 'cenote', 'mergulho', 'snorkel', 'aventur', 'safari', 'espeleol'],
+  relax: ['spa', 'resort', 'pôr do sol', 'praia particular', 'retiro', 'relaxa', 'bacalar'],
+  compras: ['mercado', 'shopping', 'artesanato', 'loja', 'feira', '5ª avenida', 'zona hoteleira'],
+  natureza: ['cenote', 'laguna', 'sian ka\'an', 'holbox', 'flamingo', 'tartaruga', 'akumal', 'parque', 'reserva', 'ilha', 'natural'],
+  historico: ['chichen', 'itzá', 'cobá', 'tulum', 'ruínas', 'ruins', 'museu maya', 'arqueol', 'zona arqueológ', 'pirâmide'],
+  praias: ['praia', 'beach', 'cozumel', 'isla mujeres', 'holbox', 'bacalar', 'akumal', 'snorkel', 'mergulho', 'barco'],
+  vida_noturna: ['bar', 'clube', 'show', 'vida noturna', 'quinta avenida', 'coco bongo'],
+  familia: ['golfinhos', 'aquário', 'xcaret', 'xel-há', 'tartaruga', 'parque', 'interativo'],
+}
+
 export const CITY_ATTRACTIONS: Record<string, string[]> = {
   // México
-  'Cancún': ['Zona Hoteleira', 'Chichen Itzá', 'Tulum', 'Isla Mujeres', 'Playa del Carmen', 'Cobá', 'Cenote Ik Kil', 'Xcaret', 'Xel-Há', 'Cenote Dos Ojos', 'Holbox', 'Mercado 28'],
-  'Playa del Carmen': ['5ª Avenida', 'Cenote Azul', 'Tulum', 'Ilha Cozumel', 'Xcaret', 'Xel-Há', 'Akumal (tartarugas)', 'Laguna Bacalar'],
+  'Cancún': [
+    // Histórico/Cultural
+    'Chichén Itzá (day trip — pirâmides maias)', 'Tulum (ruínas maias à beira-mar)', 'Cobá (ruínas na selva — suba a pirâmide)', 'Museu Maya de Cancún', 'El Rey (ruínas maias na Zona Hoteleira)',
+    // Natureza/Praias
+    'Isla Mujeres (praias e snorkel)', 'Holbox (praias virgens e flamingos)', 'Akumal (nado com tartarugas marinhas)', 'Cenote Ik Kil (mergulho em cenote aberto)', 'Cenote Dos Ojos (mergulho em cenote)', 'Laguna Nichupté (passeio de barco)', 'Sian Ka\'an (reserva natural biosfera)',
+    // Parques/Aventura
+    'Xcaret (parque cultural e ecológico)', 'Xel-Há (parque aquático na natureza)', 'Xplor (tirolesa, rafting subterrâneo, ATV)', 'Selvatica (ATV + zipline na selva)',
+    // Animais/Família
+    'Nado com golfinhos — Dolphinaris', 'Interactive Aquarium Cancún',
+    // Lazer/Compras
+    'Zona Hoteleira (praias, bares, clubs)', 'Mercado 28 (artesanato e gastronomia local)', 'Coco Bongo (show e vida noturna)',
+  ],
+  'Playa del Carmen': [
+    // Cultural/Histórico
+    'Tulum (ruínas maias à beira-mar — day trip)', 'Chichén Itzá (day trip — pirâmides maias)', 'Cobá (ruínas na selva — day trip)', 'Museu Frida Kahlo Playa del Carmen',
+    // Natureza/Praias
+    'Ilha Cozumel (snorkel e mergulho — day trip)', 'Akumal (nado com tartarugas — 30 min)', 'Laguna Bacalar (lago de 7 cores)', 'Holbox (praias virgens — day trip)', 'Sian Ka\'an (reserva natural biosfera)', 'Cenote Azul', 'Cenote Dos Ojos (mergulho)',
+    // Parques/Aventura
+    'Xcaret (parque cultural e ecológico)', 'Xel-Há (parque aquático na natureza)', 'Xplor (tirolesa, rafting subterrâneo, ATV)', 'Tour de cenotes na selva',
+    // Animais/Família
+    'Nado com golfinhos (Punta Venado)', 'Observação de tartarugas em Akumal',
+    // Gastronomia/Compras
+    '5ª Avenida (passeio, compras e gastronomia)', 'Aldea Corazón (jantar em ambiente único)', 'Alux Restaurant (jantar dentro de uma gruta)', 'Mercado de artesanato local',
+  ],
   'Cidade do México': ['Museu Nacional de Antropologia', 'Teotihuacán', 'Centro Histórico', 'Xochimilco', 'Frida Kahlo Museum', 'Chapultepec', 'Polanco', 'Mercado de La Merced', 'Palácio de Belas Artes', 'Torre Latinoamericana'],
 
   // Estados Unidos

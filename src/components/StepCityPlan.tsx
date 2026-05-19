@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import type { WizardData, CityPlan } from '../types'
 import { StepHeader, Button } from './ui'
-import { CITY_ATTRACTIONS, GENERIC_ATTRACTIONS } from '../data/attractions'
+import { CITY_ATTRACTIONS, GENERIC_ATTRACTIONS, STYLE_KEYWORDS } from '../data/attractions'
 import { getCurrencyByAirport, formatLocalAmount } from '../data/currencies'
 
 interface Props {
@@ -121,9 +121,27 @@ function getAttractionsForCity(city: string, styles: string[]): string[] {
     city.toLowerCase().includes(k.toLowerCase()) ||
     k.toLowerCase().includes(city.toLowerCase())
   )
-  if (key) return CITY_ATTRACTIONS[key]
 
-  // Fallback: mix generic suggestions based on travel styles
+  const cityList = key ? CITY_ATTRACTIONS[key] : []
+
+  // Coleta palavras-chave relevantes ao perfil do viajante
+  const relevantKeywords: string[] = []
+  for (const style of styles) {
+    const kws = STYLE_KEYWORDS[style] || []
+    relevantKeywords.push(...kws)
+  }
+
+  // Ordena: atrações que batem com o perfil vêm primeiro
+  const scoreAttraction = (a: string) => {
+    const lower = a.toLowerCase()
+    return relevantKeywords.filter(kw => lower.includes(kw)).length
+  }
+
+  if (cityList.length > 0) {
+    return [...cityList].sort((a, b) => scoreAttraction(b) - scoreAttraction(a))
+  }
+
+  // Fallback: sugestões genéricas filtradas pelo estilo
   const generic = new Set<string>()
   for (const style of styles) {
     const items = GENERIC_ATTRACTIONS[style] || []
@@ -132,7 +150,7 @@ function getAttractionsForCity(city: string, styles: string[]): string[] {
   if (generic.size === 0) {
     Object.values(GENERIC_ATTRACTIONS).slice(0, 3).flat().forEach(i => generic.add(i))
   }
-  return [...generic].slice(0, 12)
+  return [...generic].slice(0, 16)
 }
 
 export default function StepCityPlan({ data, update, onGenerate, onBack, totalDays }: Props) {
