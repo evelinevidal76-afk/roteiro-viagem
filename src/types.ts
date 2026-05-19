@@ -57,6 +57,12 @@ export interface SelectedHotel {
   roomImageUrl: string
 }
 
+export interface CityPlan {
+  city: string
+  days: number
+  selectedAttractions: string[]
+}
+
 export interface WizardData {
   // Step 1 — Voo
   outboundFlight: FlightInfo | null
@@ -79,6 +85,8 @@ export interface WizardData {
   // Step 8 — Detalhes
   travelersCount: number
   notes: string
+  // Step 9 — Plano por cidade
+  cityPlans: CityPlan[]
 }
 
 export interface ItineraryDay {

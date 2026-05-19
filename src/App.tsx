@@ -5,11 +5,12 @@ import StepCities, { StepProfile, StepStyles, StepTransport } from './components
 import StepHotel from './components/StepHotel'
 import StepCarro from './components/StepCarro'
 import StepExtras from './components/StepExtras'
+import StepCityPlan from './components/StepCityPlan'
 import ItineraryView from './components/ItineraryView'
 import DayApproval from './components/DayApproval'
 import { salvarEstado, recuperarSessao, getSessaoId, clearSessaoId } from './services/dbService'
 
-const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Hotel', 'Carro', 'Detalhes']
+const STEPS = ['Voo', 'Destino', 'Perfil', 'Estilo', 'Transporte', 'Hotel', 'Carro', 'Detalhes', 'Destinos']
 const LS_KEY = 'decifrando_roteiros_step'
 const PROGRESS_KEY = 'decifrando_roteiros_progress'
 
@@ -53,6 +54,7 @@ const initialData: WizardData = {
   selectedHotels: [],
   travelersCount: 2,
   notes: '',
+  cityPlans: [],
 }
 
 function calculateTotalDays(data: WizardData): number {
@@ -366,7 +368,10 @@ export default function App() {
         {step === 5 && <StepHotel data={data} update={update} onNext={next} onBack={back} />}
         {step === 6 && <StepCarro data={data} update={update} onNext={next} onBack={back} />}
         {step === 7 && (
-          <StepExtras data={data} update={update} onGenerate={handleGenerate} onBack={back} loading={false} error={null} />
+          <StepExtras data={data} update={update} onGenerate={next} onBack={back} loading={false} error={null} />
+        )}
+        {step === 8 && (
+          <StepCityPlan data={data} update={update} onGenerate={handleGenerate} onBack={back} totalDays={calculateTotalDays(data)} />
         )}
       </main>
     </div>

@@ -62,6 +62,7 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
   const [showBackMenu, setShowBackMenu] = useState(false)
   const [activities, setActivities] = useState<Array<{ time: string; title: string }>>([])
   const htmlRef = useRef('')
+  const streamRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     htmlRef.current = ''
@@ -70,6 +71,7 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
     setError(null)
     setShowSelector(false)
     setActivitiesToChange([])
+    if (streamRef.current) streamRef.current.innerHTML = ''
 
     const stripFences = (raw: string) =>
       raw.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim()
@@ -78,12 +80,16 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
       data, dayIndex, totalDays, previousDays, attempt,
       (chunk) => {
         htmlRef.current += chunk
-        setHtml(fixImageUrls(stripFences(htmlRef.current)))
+        // Atualiza o DOM diretamente — sem re-render do React, sem piscar
+        if (streamRef.current) {
+          streamRef.current.innerHTML = fixImageUrls(stripFences(htmlRef.current))
+        }
       },
       () => {
         const cleaned = fixImageUrls(stripFences(htmlRef.current))
         htmlRef.current = cleaned
-        setHtml(cleaned)
+        if (streamRef.current) streamRef.current.innerHTML = cleaned
+        setHtml(cleaned)  // dispara apenas uma vez, só para mostrar a barra de ações
         setLoading(false)
         setActivities(extractActivities(cleaned))
       },
@@ -211,7 +217,8 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
         )}
 
         {error && <ErrorBox message={error} />}
-        {html && <div dangerouslySetInnerHTML={{ __html: html }} />}
+        {/* Conteúdo atualizado via DOM ref durante streaming — sem re-render, sem piscar */}
+        <div ref={streamRef} />
 
         {/* Seletor de atividades para trocar */}
         {showSelector && activities.length > 0 && (

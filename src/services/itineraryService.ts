@@ -163,11 +163,41 @@ export async function generateDay(
   const regenerateNote = activitiesToChange && activitiesToChange.length > 0
     ? `\n\nSUBSTITUIÇÃO PARCIAL OBRIGATÓRIA: Mantenha TODAS as atividades deste dia EXATAMENTE como estão, EXCETO as listadas abaixo, que devem ser substituídas por alternativas completamente diferentes (mesmo horário, mesmo tipo de atividade, mas locais/restaurantes/experiências diferentes):\n${activitiesToChange.map(a => `  - ${a}`).join('\n')}`
     : attempt > 0
-      ? `\n\nNOTA: Esta e a tentativa ${attempt + 1}. Sugira atividades completamente diferentes das anteriores para este dia.`
+      ? `\n\nNOTA: Esta é a tentativa ${attempt + 1}. Sugira atividades COMPLETAMENTE DIFERENTES das anteriores — outros locais, outros restaurantes, outras experiências.`
       : ''
 
+  // Extrai títulos de atividades já usadas nos dias anteriores
+  const usedTitles: string[] = []
+  for (const dayHtml of previousDays) {
+    const re = /font-weight:\s*600[^>]*>([^<]{5,70})<\//gi
+    let m: RegExpExecArray | null
+    while ((m = re.exec(dayHtml)) !== null) {
+      const t = m[1].trim()
+      if (t.length >= 5 && !/^\d/.test(t) && !/^(Dia|Day|DIA|Hotel)\s/i.test(t)) {
+        usedTitles.push(t)
+      }
+    }
+  }
   const previousNote = previousDays.length > 0
-    ? `\n\nDias ja aprovados: ${previousDays.length} dia(s). Nao repita atividades ou restaurantes dos dias anteriores.`
+    ? `\n\nDIAS ANTERIORES JÁ APROVADOS — NÃO REPITA NADA DISSO:\n${usedTitles.length > 0 ? usedTitles.map(t => `  - ${t}`).join('\n') : `  (${previousDays.length} dia(s) aprovado(s))`}\nIsso inclui restaurantes, passeios, museus, praias, mercados. Use locais e estabelecimentos completamente diferentes.`
+    : ''
+
+  // Descobre qual cidade e quais atrações correspondem a este dia
+  const cityPlans = data.cityPlans || []
+  let currentCityPlan: { city: string; days: number; selectedAttractions: string[] } | null = null
+  if (cityPlans.length > 0) {
+    let dayCount = 0
+    for (const plan of cityPlans) {
+      if (dayIndex < dayCount + plan.days) {
+        currentCityPlan = plan
+        break
+      }
+      dayCount += plan.days
+    }
+  }
+
+  const cityAttractionNote = currentCityPlan && currentCityPlan.selectedAttractions.length > 0
+    ? `\n\nCIDADE DESTE DIA: ${currentCityPlan.city}\nATRAÇÕES SELECIONADAS PELO VIAJANTE (priorize incluir as que ainda não foram usadas nos dias anteriores):\n${currentCityPlan.selectedAttractions.map(a => `  - ${a}`).join('\n')}`
     : ''
 
   const hoteisDia = (data.selectedHotels || []).filter(h => h.confirmed && h.name.trim())
@@ -214,7 +244,7 @@ DADOS DA VIAGEM:
 - Transporte local: ${data.transport}
 - Viajantes: ${data.travelersCount}
 - Data do dia: ${dayLabel}
-- Observações: ${data.notes || 'nenhuma'}${hoteisNota}${previousNote}${regenerateNote}${arrivalNote}
+- Observações: ${data.notes || 'nenhuma'}${hoteisNota}${cityAttractionNote}${previousNote}${regenerateNote}${arrivalNote}
 ${regrasRefeicoesDia ? `\nREGRAS DE REFEIÇÕES (siga obrigatoriamente):\n${regrasRefeicoesDia}` : ''}
 
 ESTRUTURA HTML OBRIGATÓRIA — use exatamente este layout:
