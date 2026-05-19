@@ -41,10 +41,20 @@ export type TravelStyle =
 
 export type Transport = 'carro' | 'transporte_publico' | 'misto' | 'tour_guiado'
 
+export type MealPlan =
+  | 'sem_refeicoes'
+  | 'cafe_da_manha'
+  | 'meia_pensao'
+  | 'pensao_completa'
+  | 'all_inclusive'
+
 export interface SelectedHotel {
   city: string
   name: string
   confirmed: boolean
+  mealPlan: MealPlan | null
+  imageUrl: string
+  roomImageUrl: string
 }
 
 export interface WizardData {

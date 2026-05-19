@@ -1,8 +1,16 @@
 import React, { useState } from 'react'
-import type { WizardData, TravelProfile, SelectedHotel } from '../types'
+import type { WizardData, TravelProfile, SelectedHotel, MealPlan } from '../types'
 import { StepHeader, NavButtons } from './ui'
 
 const CJ_AID = '7962462'
+
+const MEAL_PLANS: { value: MealPlan; label: string; icon: string; description: string }[] = [
+  { value: 'sem_refeicoes', label: 'Sem refeições', icon: '🍽️', description: 'Nenhuma refeição incluída' },
+  { value: 'cafe_da_manha', label: 'Café da manhã', icon: '☕', description: 'Café da manhã incluído' },
+  { value: 'meia_pensao', label: 'Meia pensão', icon: '🌅', description: 'Café + jantar incluídos' },
+  { value: 'pensao_completa', label: 'Pensão completa', icon: '🍳', description: 'Café, almoço e jantar' },
+  { value: 'all_inclusive', label: 'All inclusive', icon: '✨', description: 'Tudo incluído' },
+]
 
 interface ProfileConfig {
   reviewMin: number
@@ -93,11 +101,17 @@ export default function StepHotel({ data, update, onNext, onBack }: Props) {
   const cfg = PROFILE_CONFIG[data.travelProfile || 'intermediario']
 
   const [choices, setChoices] = useState<SelectedHotel[]>(
-    () => cities.map(city => ({
-      city,
-      name: data.selectedHotels?.find(h => h.city === city)?.name || '',
-      confirmed: data.selectedHotels?.find(h => h.city === city)?.confirmed || false,
-    }))
+    () => cities.map(city => {
+      const saved = data.selectedHotels?.find(h => h.city === city)
+      return {
+        city,
+        name: saved?.name || '',
+        confirmed: saved?.confirmed || false,
+        mealPlan: saved?.mealPlan || null,
+        imageUrl: saved?.imageUrl || '',
+        roomImageUrl: saved?.roomImageUrl || '',
+      }
+    })
   )
 
   const updateChoice = (i: number, patch: Partial<SelectedHotel>) => {
@@ -229,6 +243,89 @@ export default function StepHotel({ data, update, onNext, onBack }: Props) {
                   </button>
                 </div>
               </div>
+
+              {/* Regime alimentar */}
+              {choices[i]?.name.trim() && (
+                <div style={{ marginTop: 14 }}>
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
+                    Regime de alimentação
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {MEAL_PLANS.map(mp => (
+                      <button
+                        key={mp.value}
+                        onClick={() => updateChoice(i, { mealPlan: choices[i]?.mealPlan === mp.value ? null : mp.value })}
+                        title={mp.description}
+                        style={{
+                          padding: '6px 12px',
+                          background: choices[i]?.mealPlan === mp.value ? 'rgba(201,151,60,0.15)' : 'transparent',
+                          border: `1px solid ${choices[i]?.mealPlan === mp.value ? 'var(--gold)' : 'var(--border)'}`,
+                          borderRadius: 20,
+                          color: choices[i]?.mealPlan === mp.value ? 'var(--gold)' : 'var(--muted)',
+                          fontSize: 11, fontWeight: choices[i]?.mealPlan === mp.value ? 600 : 400,
+                          cursor: 'pointer', fontFamily: 'var(--font-body)',
+                          transition: 'all 0.15s', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {mp.icon} {mp.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Imagens do hotel (opcional) */}
+              {choices[i]?.name.trim() && (
+                <div style={{ marginTop: 14 }}>
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
+                    Foto do hotel (URL, opcional)
+                  </label>
+                  <input
+                    type="url"
+                    value={choices[i]?.imageUrl || ''}
+                    onChange={e => updateChoice(i, { imageUrl: e.target.value })}
+                    placeholder="https://..."
+                    style={{
+                      width: '100%', padding: '8px 12px', boxSizing: 'border-box',
+                      background: '#111827', border: '1px solid var(--border)',
+                      borderRadius: 8, color: 'var(--cream)', fontSize: 12,
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  />
+                  {choices[i]?.imageUrl && (
+                    <img
+                      src={choices[i].imageUrl}
+                      alt="Hotel"
+                      style={{ marginTop: 6, width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }}
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  )}
+
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4, marginTop: 10 }}>
+                    Foto do quarto (URL, opcional)
+                  </label>
+                  <input
+                    type="url"
+                    value={choices[i]?.roomImageUrl || ''}
+                    onChange={e => updateChoice(i, { roomImageUrl: e.target.value })}
+                    placeholder="https://..."
+                    style={{
+                      width: '100%', padding: '8px 12px', boxSizing: 'border-box',
+                      background: '#111827', border: '1px solid var(--border)',
+                      borderRadius: 8, color: 'var(--cream)', fontSize: 12,
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  />
+                  {choices[i]?.roomImageUrl && (
+                    <img
+                      src={choices[i].roomImageUrl}
+                      alt="Quarto"
+                      style={{ marginTop: 6, width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }}
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

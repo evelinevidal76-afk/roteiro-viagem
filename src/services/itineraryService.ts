@@ -22,9 +22,45 @@ export async function generateItineraryStream(
   const cidadesTexto = cities.length > 0 ? cities.join(', ') : destino
 
   const hoteis = (data.selectedHotels || []).filter(h => h.confirmed && h.name.trim())
+
+  const MEAL_LABELS: Record<string, string> = {
+    sem_refeicoes: 'sem refeições incluídas',
+    cafe_da_manha: 'café da manhã incluído',
+    meia_pensao: 'meia pensão (café da manhã + jantar incluídos)',
+    pensao_completa: 'pensão completa (café, almoço e jantar incluídos)',
+    all_inclusive: 'all inclusive (todas as refeições e bebidas incluídas)',
+  }
+
   const hoteisTexto = hoteis.length > 0
-    ? hoteis.map(h => `  ${h.city}: ${h.name}`).join('\n')
+    ? hoteis.map(h => {
+        const regime = h.mealPlan ? ` — regime: ${MEAL_LABELS[h.mealPlan]}` : ''
+        return `  ${h.city}: ${h.name}${regime}`
+      }).join('\n')
     : '  Não informado (use sugestões genéricas)'
+
+  // Regras de refeições baseadas no regime
+  const regrasRefeicoes = hoteis
+    .filter(h => h.mealPlan && h.mealPlan !== 'sem_refeicoes')
+    .map(h => {
+      if (h.mealPlan === 'cafe_da_manha') return `  - ${h.city}: o hotel serve café da manhã, não precisa sugerir café externo nessa cidade`
+      if (h.mealPlan === 'meia_pensao') return `  - ${h.city}: o hotel serve café da manhã e jantar, sugira apenas almoço externo nessa cidade`
+      if (h.mealPlan === 'pensao_completa') return `  - ${h.city}: o hotel serve todas as refeições, não sugira restaurantes externos nessa cidade`
+      if (h.mealPlan === 'all_inclusive') return `  - ${h.city}: hotel all inclusive, todas as refeições e bebidas estão incluídas, não sugira restaurantes externos nessa cidade`
+      return ''
+    })
+    .filter(Boolean)
+    .join('\n')
+
+  // Imagens dos hotéis para incluir no HTML
+  const hoteisImagens = hoteis
+    .filter(h => h.imageUrl || h.roomImageUrl)
+    .map(h => {
+      const imgs = []
+      if (h.imageUrl) imgs.push(`    foto exterior: ${h.imageUrl}`)
+      if (h.roomImageUrl) imgs.push(`    foto do quarto: ${h.roomImageUrl}`)
+      return `  ${h.city} — ${h.name}:\n${imgs.join('\n')}`
+    })
+    .join('\n')
 
   const prompt = `Você é um especialista em viagens de luxo e milhas aéreas. Crie um roteiro de viagem completo em HTML bonito e bem estruturado.
 
@@ -39,6 +75,8 @@ DADOS DA VIAGEM:
 
 HOTÉIS ESCOLHIDOS (mencione-os nas atividades de check-in/check-out):
 ${hoteisTexto}
+${regrasRefeicoes ? `\nREGRAS DE REFEIÇÕES (siga obrigatoriamente):\n${regrasRefeicoes}` : ''}
+${hoteisImagens ? `\nIMAGENS DOS HOTÉIS (use no HTML da seção de hospedagem):\n${hoteisImagens}` : ''}
 
 VOOS DE IDA:
 ${voosIda || '  Não informado'}
@@ -49,7 +87,8 @@ ${voosRetorno || '  Não informado'}
 Gere HTML completo com estas seções:
 - Cabeçalho com destino, resumo e custo estimado total
 - Um bloco por dia com título do dia, data e lista de atividades (horário, título, descrição, dica, custo estimado)
-- Seção de hospedagem confirmada com os hotéis escolhidos (ou sugestões genéricas se não informado)
+- Para cada atividade de passeio ou restaurante, inclua uma imagem usando: <img src="https://source.unsplash.com/featured/800x200/?{palavras-chave-em-inglês}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:180px" loading="lazy" alt="{nome da atividade}">
+- Seção de hospedagem confirmada com os hotéis escolhidos (ou sugestões genéricas se não informado). Se o hotel tem imagens fornecidas, exiba-as com <img src="{url}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:220px" loading="lazy">
 
 Use estas classes CSS inline para estilo dark/dourado:
 - Fundo dos cards: background:#1a2235; border:1px solid #2d3a52; border-radius:12px; padding:20px; margin-bottom:16px
@@ -129,9 +168,33 @@ export async function generateDay(
     : ''
 
   const hoteisDia = (data.selectedHotels || []).filter(h => h.confirmed && h.name.trim())
+
+  const MEAL_LABELS_DAY: Record<string, string> = {
+    sem_refeicoes: 'sem refeições incluídas',
+    cafe_da_manha: 'café da manhã incluído',
+    meia_pensao: 'meia pensão (café da manhã + jantar incluídos)',
+    pensao_completa: 'pensão completa (café, almoço e jantar incluídos)',
+    all_inclusive: 'all inclusive (todas as refeições e bebidas incluídas)',
+  }
+
   const hoteisNota = hoteisDia.length > 0
-    ? `\n- Hoteis confirmados: ${hoteisDia.map(h => `${h.city}: ${h.name}`).join(', ')}`
+    ? `\n- Hoteis confirmados: ${hoteisDia.map(h => {
+        const regime = h.mealPlan ? ` (${MEAL_LABELS_DAY[h.mealPlan]})` : ''
+        return `${h.city}: ${h.name}${regime}`
+      }).join(', ')}`
     : ''
+
+  const regrasRefeicoesDia = hoteisDia
+    .filter(h => h.mealPlan && h.mealPlan !== 'sem_refeicoes')
+    .map(h => {
+      if (h.mealPlan === 'cafe_da_manha') return `  - Hotel em ${h.city} serve café da manhã, não sugira café externo`
+      if (h.mealPlan === 'meia_pensao') return `  - Hotel em ${h.city} serve café da manhã e jantar, sugira apenas almoço externo`
+      if (h.mealPlan === 'pensao_completa') return `  - Hotel em ${h.city} serve todas as refeições, não sugira restaurantes externos`
+      if (h.mealPlan === 'all_inclusive') return `  - Hotel em ${h.city} é all inclusive, não sugira restaurantes externos`
+      return ''
+    })
+    .filter(Boolean)
+    .join('\n')
 
   const prompt = `Voce e um especialista em viagens de luxo. Crie o roteiro do Dia ${dayIndex + 1} de ${totalDays} de uma viagem.
 
@@ -144,11 +207,13 @@ DADOS DA VIAGEM:
 - Viajantes: ${data.travelersCount}
 - Data do dia: ${dayLabel}
 - Observacoes: ${data.notes || 'nenhuma'}${hoteisNota}${previousNote}${regenerateNote}
+${regrasRefeicoesDia ? `\nREGRAS DE REFEIÇÕES (siga obrigatoriamente):\n${regrasRefeicoesDia}` : ''}
 
 Gere HTML apenas para ESTE DIA com:
 - Titulo do dia (Dia ${dayIndex + 1} - ${dayLabel})
 - 5 a 7 atividades com horario, titulo, descricao curta, dica e custo estimado
-- Sugestao de restaurante para almoco e jantar
+- Para cada atividade de passeio ou restaurante, inclua uma imagem usando: <img src="https://source.unsplash.com/featured/800x200/?{palavras-chave-em-ingles-do-local}" style="width:100%;border-radius:8px;margin:8px 0;object-fit:cover;max-height:180px" loading="lazy" alt="{nome da atividade}">
+- Sugestao de restaurante para almoco${regrasRefeicoesDia.includes('jantar') ? '' : ' e jantar'}
 
 Use estilos inline dark/dourado:
 - Card do dia: background:#1a2235; border:1px solid #2d3a52; border-radius:12px; padding:20px; margin-bottom:16px
