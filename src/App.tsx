@@ -287,8 +287,37 @@ export default function App() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--gold)', fontWeight: 700 }}>Decifrando Roteiros</div>
           <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>Decifrando Milhas</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {saving && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Salvando...</span>}
+
+          {/* Botão de retorno ao roteiro em andamento */}
+          {totalDays > 0 && (
+            <button
+              onClick={() => {
+                if (fullItineraryHtml) {
+                  setMode('fullItinerary')
+                } else {
+                  setMode('dayApproval')
+                }
+                saveProgress({
+                  mode: fullItineraryHtml ? 'fullItinerary' : 'dayApproval',
+                  approvedDays,
+                  currentDayIndex,
+                  totalDays,
+                  fullItineraryHtml,
+                  selectedHotels: data.selectedHotels || [],
+                })
+              }}
+              style={{
+                padding: '7px 14px', fontSize: 12, fontWeight: 600,
+                background: 'var(--gold)', border: 'none', borderRadius: 8,
+                color: '#0d1521', cursor: 'pointer', fontFamily: 'var(--font-body)',
+              }}
+            >
+              {fullItineraryHtml ? '→ Ver roteiro completo' : `→ Continuar roteiro (Dia ${currentDayIndex + 1}/${totalDays})`}
+            </button>
+          )}
+
           {(data.outboundFlight || step > 0) && (
             <button onClick={restart} style={{ fontSize: 11, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
               Recomeçar
