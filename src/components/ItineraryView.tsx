@@ -93,7 +93,7 @@ export default function ItineraryView({ html, loading, data, onRestart }: Props)
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>Gerando seu roteiro personalizado...</p>
           </div>
         )}
-        <div ref={contentRef} dangerouslySetInnerHTML={{ __html: html }} />
+        <div ref={contentRef} dangerouslySetInnerHTML={{ __html: html.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim() }} />
       </main>
 
       {/* Print styles */}

@@ -50,12 +50,21 @@ export default function DayApproval({ data, dayIndex, totalDays, previousDays, o
     setShowSelector(false)
     setActivitiesToChange([])
 
+    const stripFences = (raw: string) =>
+      raw.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim()
+
     generateDay(
       data, dayIndex, totalDays, previousDays, attempt,
-      (chunk) => { htmlRef.current += chunk; setHtml(htmlRef.current) },
+      (chunk) => {
+        htmlRef.current += chunk
+        setHtml(stripFences(htmlRef.current))
+      },
       () => {
+        const cleaned = stripFences(htmlRef.current)
+        htmlRef.current = cleaned
+        setHtml(cleaned)
         setLoading(false)
-        setActivities(extractActivities(htmlRef.current))
+        setActivities(extractActivities(cleaned))
       },
       (msg) => { setError(msg); setLoading(false) },
       activitiesToChange.length > 0 ? activitiesToChange : undefined
