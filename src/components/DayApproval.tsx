@@ -12,36 +12,26 @@ interface Props {
   onBack?: (step?: number) => void
 }
 
-let imgSeedCounter = 0
-
-// Converte URLs de imagem para picsum.photos com seed derivado das keywords
-// source.unsplash.com foi descontinuado em 2023; loremflickr retorna fotos aleatórias
-// picsum.photos é 100% confiável e varia pelo seed
-function keywordSeed(keywords: string): string {
-  let hash = 0
-  for (let i = 0; i < keywords.length; i++) {
-    hash = ((hash << 5) - hash + keywords.charCodeAt(i)) | 0
-  }
-  return Math.abs(hash).toString()
-}
-
+// Converte URLs loremflickr → /api/photos (proxy Pexels)
+// Fallback automático para picsum se PEXELS_API_KEY não estiver configurada
 function fixImageUrls(html: string): string {
+  let counter = 0
   return html.replace(/src="([^"]+)"/g, (match, url) => {
     // URL com placeholder {..} ou vazia
     if (url.includes('{') || url.includes('}') || url.trim() === '') {
-      imgSeedCounter++
-      return `src="https://picsum.photos/seed/t${imgSeedCounter * 17}/800/220"`
+      counter++
+      return `src="/api/photos?q=travel+destination+${counter}&w=800&h=220"`
     }
-    // loremflickr com keywords → picsum com seed derivado das keywords
-    const flickrMatch = url.match(/loremflickr\.com\/(\d+)\/(\d+)\/(.+)/)
+    // loremflickr com keywords → /api/photos?q=palavras chave
+    const flickrMatch = url.match(/loremflickr\.com\/(\d+)\/(\d+)\/([^"?#]+)/)
     if (flickrMatch) {
-      const w = flickrMatch[1], h = flickrMatch[2], kw = flickrMatch[3]
-      return `src="https://picsum.photos/seed/${keywordSeed(kw)}/${w}/${h}"`
+      const w = flickrMatch[1], h = flickrMatch[2]
+      const query = decodeURIComponent(flickrMatch[3]).replace(/,/g, ' ').trim()
+      return `src="/api/photos?q=${encodeURIComponent(query)}&w=${w}&h=${h}"`
     }
-    // loremflickr sem keywords ou source.unsplash.com → picsum fallback
+    // loremflickr sem path ou source.unsplash.com (descontinuado jan/2023)
     if (/loremflickr\.com/.test(url) || /source\.unsplash\.com/.test(url)) {
-      imgSeedCounter++
-      return `src="https://picsum.photos/seed/t${imgSeedCounter * 17}/800/220"`
+      return `src="/api/photos?q=travel+vacation+scenery&w=800&h=220"`
     }
     return match
   })

@@ -260,9 +260,9 @@ ESTRUTURA HTML OBRIGATÓRIA — use exatamente este layout:
 
 <div style="font-family:'Helvetica Neue',Arial,sans-serif;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 40px rgba(0,0,0,0.12);margin-bottom:28px;">
 
-  <!-- COVER: imagem de capa full-width do destino/cidade do dia -->
+  <!-- COVER: imagem de capa do dia. OBRIGATÓRIO: troque as keywords "cancun,caribbean,arrival" por 3-4 palavras em inglês que descrevam o destino REAL e o tema deste dia específico. Exemplos corretos: "playa,del,carmen,beach,turquoise" / "chichen,itza,ruins,yucatan" / "cenote,underwater,swim,mexico" / "cozumel,reef,snorkeling,caribbean" / "tulum,ruins,cliff,sea" / "xel,ha,waterpark,mexico". NÃO use palavras como "typewriter", "desk", "work", "planning". Use apenas lugares e natureza. -->
   <div style="position:relative;overflow:hidden;">
-    <img src="https://loremflickr.com/800/280/cancun,beach,travel" style="width:100%;height:240px;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display='none'" alt="Dia ${dayIndex + 1}">
+    <img src="https://loremflickr.com/800/280/cancun,caribbean,arrival" style="width:100%;height:240px;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display='none'" alt="Dia ${dayIndex + 1}">
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.05) 30%,rgba(0,0,0,0.72));display:flex;flex-direction:column;justify-content:flex-end;padding:28px;">
       <div style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">DIA ${dayIndex + 1} DE ${totalDays}</div>
       <div style="color:#ffffff;font-size:24px;font-weight:700;line-height:1.2;">{titulo do dia e data}</div>
@@ -290,9 +290,9 @@ ESTRUTURA HTML OBRIGATÓRIA — use exatamente este layout:
 </div>
 
 REGRAS DE IMAGENS:
-- APENAS a foto de capa do dia (cover) deve ter <img>. Use loremflickr.com com palavras-chave do destino: https://loremflickr.com/800/280/playa,del,carmen,beach
+- APENAS a foto de capa do dia (cover) deve ter <img>. Use loremflickr.com com palavras-chave ESPECÍFICAS do destino e tema do dia, em inglês, separadas por vírgula sem espaço. Exemplos: "playa,del,carmen,beach,turquoise" / "chichen,itza,ruins,yucatan" / "cenote,swim,jungle,mexico" / "cozumel,snorkeling,reef,caribbean" / "tulum,ruins,cliff,mexico". NUNCA use keywords genéricas como "travel,destination" se souber o destino real.
 - NÃO coloque <img> dentro dos blocos de atividade — só texto, descrição, dica e custo
-- Para hotéis: pode incluir 1 imagem se desejar: loremflickr.com/800/260/hotel,resort,tropical
+- Para hotéis: pode incluir 1 imagem com keywords do tipo de hotel: loremflickr.com/800/260/hotel,resort,pool,tropical
 - NUNCA use variáveis ou chaves {{ }} dentro de URLs
 - Sugestão de ${regrasRefeicoesDia.includes('almoço') ? 'almoço' : 'almoço e jantar'} com nome real do restaurante e link Google Maps
 - Links Booking.com sempre com &aid=7962462
