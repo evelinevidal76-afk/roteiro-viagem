@@ -112,6 +112,7 @@ export default function App() {
   const [emailSaving, setEmailSaving] = useState(false)
   const [emailSaved, setEmailSaved] = useState(!!getSessaoEmail())
   const [codeCopied, setCodeCopied] = useState(false)
+  const [showCodeBanner, setShowCodeBanner] = useState(false)
 
   useEffect(() => {
     const sessaoId = getSessaoId()
@@ -179,7 +180,7 @@ export default function App() {
     // Detecta quando a sessão (e o código) é criada pela primeira vez
     if (!accessCode) {
       const code = getSessaoCodigo()
-      if (code) setAccessCode(code)
+      if (code) { setAccessCode(code); setShowCodeBanner(true) }
     }
     setSaving(false)
   }
@@ -502,9 +503,41 @@ export default function App() {
         })}
       </div>
 
-      {step > 0 && (
+      {step > 0 && !showCodeBanner && (
         <div style={{ padding: '6px 24px', background: 'rgba(201,151,60,0.06)', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ color: 'var(--gold)' }}>●</span> Progresso salvo automaticamente
+        </div>
+      )}
+
+      {/* Banner de código — aparece quando o código é gerado pela primeira vez */}
+      {showCodeBanner && accessCode && (
+        <div style={{ padding: '16px 24px', background: 'rgba(201,151,60,0.12)', borderBottom: '1px solid rgba(201,151,60,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Seu código de acesso — anote ou copie agora</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--gold)', letterSpacing: '0.2em', fontFamily: 'monospace' }}>{accessCode}</span>
+                <button onClick={handleCopyCode}
+                  style={{ fontSize: 12, color: codeCopied ? '#34d399' : 'var(--gold)', background: 'rgba(201,151,60,0.1)', border: '1px solid rgba(201,151,60,0.3)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+                  {codeCopied ? '✓ Copiado' : 'Copiar'}
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Vincule um e-mail para recuperar em qualquer dispositivo:</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)}
+                  placeholder="seu@email.com" onKeyDown={e => e.key === 'Enter' && handleSaveEmail()}
+                  style={{ padding: '7px 10px', fontSize: 12, background: 'var(--navy)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--cream)', width: 190 }} />
+                <button onClick={handleSaveEmail} disabled={emailSaving || !userEmail.trim() || emailSaved}
+                  style={{ fontSize: 12, padding: '7px 12px', background: emailSaved ? 'rgba(52,211,153,0.15)' : 'var(--gold)', border: 'none', borderRadius: 6, color: emailSaved ? '#34d399' : '#0d1521', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>
+                  {emailSaved ? '✓ Salvo' : emailSaving ? '...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+          <button onClick={() => setShowCodeBanner(false)}
+            style={{ fontSize: 18, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: 4 }}>✕</button>
         </div>
       )}
 
