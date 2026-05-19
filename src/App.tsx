@@ -87,20 +87,17 @@ export default function App() {
 
   useEffect(() => {
     const sessaoId = getSessaoId()
+    const progress = loadProgress()
+    const hasSavedData = !!sessaoId || !!progress
+
+    // Se não há nada salvo, pula direto para o wizard sem mostrar spinner
+    if (!hasSavedData) {
+      setRestoring(false)
+      return
+    }
 
     const restoreAll = async () => {
-      // 1. Restaura WizardData do Supabase
-      if (sessaoId) {
-        const saved = await recuperarSessao(sessaoId).catch(() => null)
-        if (saved) {
-          setData(prev => ({ ...prev, ...saved }))
-          const savedStep = parseInt(localStorage.getItem(LS_KEY) || '0')
-          setStep(savedStep)
-        }
-      }
-
-      // 2. Restaura progresso do roteiro (aprovação dia a dia) do localStorage
-      const progress = loadProgress()
+      // 1. Restaura progresso do roteiro (localStorage — rápido, sem rede)
       if (progress) {
         if (progress.selectedHotels?.length) {
           setData(prev => ({ ...prev, selectedHotels: progress.selectedHotels }))
@@ -111,6 +108,20 @@ export default function App() {
           setCurrentDayIndex(progress.currentDayIndex || 0)
           setTotalDays(progress.totalDays || 0)
           setFullItineraryHtml(progress.fullItineraryHtml || null)
+        }
+      }
+
+      // 2. Restaura WizardData do Supabase (com timeout de 4s para não travar)
+      if (sessaoId) {
+        const timeout = new Promise<null>(res => setTimeout(() => res(null), 4000))
+        const saved = await Promise.race([
+          recuperarSessao(sessaoId).catch(() => null),
+          timeout,
+        ])
+        if (saved) {
+          setData(prev => ({ ...prev, ...saved }))
+          const savedStep = parseInt(localStorage.getItem(LS_KEY) || '0')
+          setStep(savedStep)
         }
       }
 
