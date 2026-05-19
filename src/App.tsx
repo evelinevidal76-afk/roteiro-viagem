@@ -68,10 +68,16 @@ function calculateTotalDays(data: WizardData): number {
   if (outLegs.length === 0) return 5
 
   // Usa último trecho de ida (data de chegada ao destino) como ponto de partida
+  // parseLocalDate evita o bug de timezone: new Date('2026-10-20') vira UTC 00:00
+  // que no fuso UTC-3 do Brasil fica dia 19 às 21h
+  const parseLocalDate = (str: string) => {
+    const [y, m, d] = str.split('-').map(Number)
+    return new Date(y, m - 1, d, 12, 0, 0)
+  }
   const lastOutLeg = outLegs[outLegs.length - 1]
-  const outDate = new Date(lastOutLeg.date)
+  const outDate = parseLocalDate(lastOutLeg.date)
   if (retLegs.length > 0) {
-    const retDate = new Date(retLegs[0].date)
+    const retDate = parseLocalDate(retLegs[0].date)
     const diff = Math.round((retDate.getTime() - outDate.getTime()) / (1000 * 60 * 60 * 24))
     return Math.max(1, Math.min(diff, 21))
   }

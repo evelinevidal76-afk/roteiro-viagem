@@ -157,8 +157,14 @@ export async function generateDay(
 
   // Usa a data do último trecho de ida (data de chegada ao destino)
   // Para voos com conexão, o primeiro trecho sai do Brasil e o último chega ao destino
+  // parseLocalDate evita o bug de timezone: new Date('2026-10-20') vira UTC 00:00
+  // que no fuso UTC-3 do Brasil fica dia 19 às 21h
+  function parseLocalDate(str: string): Date {
+    const [y, m, d] = str.split('-').map(Number)
+    return new Date(y, m - 1, d, 12, 0, 0)
+  }
   const lastOutLeg = outLegs.length > 0 ? outLegs[outLegs.length - 1] : null
-  const dateBase = lastOutLeg ? new Date(lastOutLeg.date) : new Date()
+  const dateBase = lastOutLeg ? parseLocalDate(lastOutLeg.date) : new Date()
   const dayDate = new Date(dateBase)
   dayDate.setDate(dayDate.getDate() + dayIndex)
   const dayLabel = dayDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
